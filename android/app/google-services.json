@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "958473610022",
+    "project_id": "campussync-dbda1",
+    "storage_bucket": "campussync-dbda1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:958473610022:android:af158c3a44a710b9a857e7",
+        "android_client_info": {
+          "package_name": "com.example.campussync"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBw9H-vk4W7L8PGsHQckWE2B0ASAILf0VY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
