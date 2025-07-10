@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import '../screens/auth/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,10 +15,7 @@ class CampusSyncApp extends StatelessWidget {
       title: 'CampusSync',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.deepPurple),
-      home: Scaffold(
-        appBar: AppBar(title: Text('CampusSync')),
-        body: Center(child: Text('Firebase Initialized!')),
-      ),
+      home: const LoginScreen(),
     );
   }
 }
