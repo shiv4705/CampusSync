@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:campussync/screens/dashboard/admin_dashboard.dart';
 import 'package:campussync/screens/dashboard/faculty_dashboard.dart';
 import 'package:campussync/screens/dashboard/student_dashboard.dart';
@@ -74,6 +76,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 8),
+
+            // Forgot password
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _handleForgotPassword,
+                child: const Text("Forgot Password?"),
+              ),
+            ),
             const SizedBox(height: 24),
 
             // Login button or loading spinner
@@ -92,6 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // LOGIN FUNCTION
   void _handleLogin() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
@@ -146,6 +159,43 @@ class _LoginScreenState extends State<LoginScreen> {
       _showErrorDialog("Something went wrong. Try again.");
     } finally {
       setState(() => _isLoading = false);
+    }
+  }
+
+  // FORGOT PASSWORD HANDLER
+  void _handleForgotPassword() async {
+    final email = _emailController.text.trim();
+
+    if (email.isEmpty) {
+      _showErrorDialog(
+        "Please enter your email above before requesting reset.",
+      );
+      return;
+    }
+
+    try {
+      await FirebaseFirestore.instance.collection('reset_requests').add({
+        'email': email,
+        'timestamp': Timestamp.now(),
+        'status': 'pending',
+      });
+
+      showDialog(
+        context: context,
+        builder:
+            (_) => AlertDialog(
+              title: const Text("Request Submitted"),
+              content: Text("Password reset request submitted for $email."),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("OK"),
+                ),
+              ],
+            ),
+      );
+    } catch (e) {
+      _showErrorDialog("Error submitting request. Try again later.");
     }
   }
 

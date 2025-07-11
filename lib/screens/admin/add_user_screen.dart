@@ -12,7 +12,10 @@ class AddUserScreen extends StatefulWidget {
 class _AddUserScreenState extends State<AddUserScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
   String? _message;
 
   String _detectRole(String email) {
@@ -24,10 +27,20 @@ class _AddUserScreenState extends State<AddUserScreen> {
   Future<void> _addUser() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
     final role = _detectRole(email);
 
-    if (email.isEmpty || password.isEmpty) {
-      setState(() => _message = "Error: Email and password cannot be empty.");
+    if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+      setState(
+        () =>
+            _message =
+                "Error: Email, password, and confirm password cannot be empty.",
+      );
+      return;
+    }
+
+    if (password != confirmPassword) {
+      setState(() => _message = "Error: Passwords do not match.");
       return;
     }
 
@@ -61,6 +74,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
         _message = "User created successfully as '$role'.";
         _emailController.clear();
         _passwordController.clear();
+        _confirmPasswordController.clear();
       });
     } on FirebaseAuthException catch (e) {
       setState(() => _message = "Error: ${e.message}");
@@ -90,10 +104,43 @@ class _AddUserScreenState extends State<AddUserScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
+              obscureText: !_isPasswordVisible,
+              decoration: InputDecoration(
                 labelText: "Password",
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isPasswordVisible
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible;
+                    });
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _confirmPasswordController,
+              obscureText: !_isConfirmPasswordVisible,
+              decoration: InputDecoration(
+                labelText: "Confirm Password",
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isConfirmPasswordVisible
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                    });
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -127,6 +174,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 }
