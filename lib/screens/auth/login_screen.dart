@@ -11,13 +11,13 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-// 🔍 Role detection based on email
+// Role detection based on email
 String _detectRoleFromEmail(String email) {
-  if (email == 'admin@campus.edu.in') {
+  if (email.startsWith('sample.admin@')) {
     return 'admin';
-  } else if (email.startsWith('faculty.')) {
+  } else if (email.startsWith('sample.faculty.')) {
     return 'faculty';
-  } else if (RegExp(r'^\d{2}[a-z]{2}\d{3}@campus\.edu\.in$').hasMatch(email)) {
+  } else if (email.startsWith('sample.student.')) {
     return 'student';
   } else {
     return 'unknown';
@@ -25,11 +25,9 @@ String _detectRoleFromEmail(String email) {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // Controllers
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  // UI state
   bool _isLoading = false;
   bool _obscurePassword = true;
 
@@ -42,6 +40,10 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // College Logo
+            Center(child: Image.asset('assets/icon.png', height: 120)),
+            const SizedBox(height: 24),
+
             // Email field
             TextField(
               controller: _emailController,
@@ -53,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Password field with toggle
+            // Password field with visibility toggle
             TextField(
               controller: _passwordController,
               obscureText: _obscurePassword,
@@ -74,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Login button or loader
+            // Login button or loading spinner
             _isLoading
                 ? const CircularProgressIndicator()
                 : SizedBox(
@@ -94,18 +96,14 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
-    // Basic input check
     if (email.isEmpty || password.isEmpty) {
       _showErrorDialog("Please enter both email and password.");
       setState(() => _isLoading = false);
       return;
     }
 
-    // Detect role before login
     final role = _detectRoleFromEmail(email);
     if (role == 'unknown') {
       _showInvalidEmailDialog();
@@ -114,12 +112,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     try {
-      UserCredential userCredential = await FirebaseAuth.instance
+      final userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
 
       final user = userCredential.user;
       if (user != null) {
-        // Navigate to appropriate dashboard
         if (role == 'admin') {
           Navigator.pushReplacement(
             context,
@@ -144,9 +141,8 @@ class _LoginScreenState extends State<LoginScreen> {
       } else if (e.code == 'wrong-password') {
         message = "Incorrect password.";
       }
-
       _showErrorDialog(message);
-    } catch (e) {
+    } catch (_) {
       _showErrorDialog("Something went wrong. Try again.");
     } finally {
       setState(() => _isLoading = false);
@@ -160,7 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
           (_) => AlertDialog(
             title: const Text("Invalid Email Format"),
             content: const Text(
-              "Your email address does not match any known role.\n"
+              "Your email address does not match any known role.",
             ),
             actions: [
               TextButton(
