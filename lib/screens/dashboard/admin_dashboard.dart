@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../admin/view_reset_requests.screen.dart';
 import '../admin/add_user_screen.dart';
 import '../admin/view_feedback_screen.dart';
+import '../admin/view_all_users_screen.dart'; // ✅ Import this
 import '../auth/login_screen.dart';
 
 class AdminDashboard extends StatelessWidget {
@@ -33,6 +34,7 @@ class AdminDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 30),
 
+            // Add User
             ElevatedButton.icon(
               icon: const Icon(Icons.person_add),
               label: const Text("Add New User"),
@@ -45,6 +47,20 @@ class AdminDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
+            // ✅ View All Users
+            ElevatedButton.icon(
+              icon: const Icon(Icons.people),
+              label: const Text("View All Users"),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ViewAllUsersScreen()),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // View Feedback
             ElevatedButton.icon(
               icon: const Icon(Icons.feedback),
               label: const Text("View Feedback"),
@@ -57,6 +73,7 @@ class AdminDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
+            // View Password Reset Requests
             ElevatedButton.icon(
               icon: const Icon(Icons.request_page),
               label: const Text("View Reset Requests"),
@@ -69,9 +86,9 @@ class AdminDashboard extends StatelessWidget {
                 );
               },
             ),
-
             const SizedBox(height: 30),
 
+            // Logout
             Center(
               child: TextButton.icon(
                 icon: const Icon(Icons.logout),

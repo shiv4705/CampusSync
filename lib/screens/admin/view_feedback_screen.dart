@@ -7,7 +7,24 @@ class ViewFeedbackScreen extends StatelessWidget {
 
   String _formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return "Unknown time";
-    return DateFormat('dd MM yyyy, hh:mm a').format(timestamp.toDate());
+    return DateFormat('dd MMM yyyy, hh:mm a').format(timestamp.toDate());
+  }
+
+  void _showMessageDialog(BuildContext context, String title, String message) {
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: Text(title),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Close"),
+              ),
+            ],
+          ),
+    );
   }
 
   @override
@@ -39,8 +56,11 @@ class ViewFeedbackScreen extends StatelessWidget {
             itemCount: feedbackDocs.length,
             itemBuilder: (context, index) {
               final doc = feedbackDocs[index];
-              final text = doc['text'] ?? '';
-              final timestamp = doc['timestamp'] as Timestamp?;
+              final data = doc.data() as Map<String, dynamic>;
+
+              final title = data['title'] ?? 'No Title';
+              final message = data['message'] ?? 'No Message';
+              final timestamp = data['timestamp'] as Timestamp?;
 
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -49,9 +69,10 @@ class ViewFeedbackScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: ListTile(
-                  title: Text(text),
-                  subtitle: Text(_formatTimestamp(timestamp)),
                   leading: const Icon(Icons.feedback_outlined),
+                  title: Text(title),
+                  subtitle: Text(_formatTimestamp(timestamp)),
+                  onTap: () => _showMessageDialog(context, title, message),
                 ),
               );
             },

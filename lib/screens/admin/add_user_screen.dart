@@ -10,6 +10,7 @@ class AddUserScreen extends StatefulWidget {
 }
 
 class _AddUserScreenState extends State<AddUserScreen> {
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -25,17 +26,17 @@ class _AddUserScreenState extends State<AddUserScreen> {
   }
 
   Future<void> _addUser() async {
+    final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
     final role = _detectRole(email);
 
-    if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
-      setState(
-        () =>
-            _message =
-                "Error: Email, password, and confirm password cannot be empty.",
-      );
+    if (name.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty ||
+        confirmPassword.isEmpty) {
+      setState(() => _message = "Error: All fields are required.");
       return;
     }
 
@@ -60,18 +61,20 @@ class _AddUserScreenState extends State<AddUserScreen> {
       // Create user in Firebase Auth
       final userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
-
       final uid = userCredential.user!.uid;
 
       // Store user info in Firestore
       await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'uid': uid,
+        'name': name,
         'email': email,
         'role': role,
         'createdAt': Timestamp.now(),
       });
 
       setState(() {
-        _message = "User created successfully as '$role'.";
+        _message = "User '$name' created successfully as '$role'.";
+        _nameController.clear();
         _emailController.clear();
         _passwordController.clear();
         _confirmPasswordController.clear();
@@ -93,6 +96,14 @@ class _AddUserScreenState extends State<AddUserScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: "Full Name",
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(
@@ -172,6 +183,7 @@ class _AddUserScreenState extends State<AddUserScreen> {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();

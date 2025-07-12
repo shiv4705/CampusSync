@@ -33,7 +33,6 @@ class ViewResetRequestsScreen extends StatelessWidget {
               final data = doc.data() as Map<String, dynamic>;
               final email = data['email'] ?? '';
               final requestedPassword = data['requestedPassword'] ?? '';
-              final status = data['status'] ?? 'pending';
               final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
 
               return Card(
@@ -44,9 +43,7 @@ class ViewResetRequestsScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 4),
-                      Text("New Password: $requestedPassword"),
                       if (timestamp != null) Text("Requested on: $timestamp"),
-                      Text("Status: $status"),
                     ],
                   ),
                   trailing: IconButton(
