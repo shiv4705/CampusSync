@@ -3,7 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../admin/view_reset_requests.screen.dart';
 import '../admin/add_user_screen.dart';
 import '../admin/view_feedback_screen.dart';
-import '../admin/view_all_users_screen.dart'; // ✅ Import this
+import '../admin/view_all_users_screen.dart';
+import '../admin/timetable/manage_timetable_screen.dart'; // Import the ManageTimetableScreen
 import '../auth/login_screen.dart';
 
 class AdminDashboard extends StatelessWidget {
@@ -47,7 +48,7 @@ class AdminDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // ✅ View All Users
+            // View All Users
             ElevatedButton.icon(
               icon: const Icon(Icons.people),
               label: const Text("View All Users"),
@@ -82,6 +83,21 @@ class AdminDashboard extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (_) => const ViewResetRequestsScreen(),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Manage Timetable
+            ElevatedButton.icon(
+              icon: const Icon(Icons.calendar_today),
+              label: const Text("Manage Timetable"),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ManageTimetableScreen(),
                   ),
                 );
               },

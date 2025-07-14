@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../auth/login_screen.dart';
-import '../feedback/submit_feedback_screen.dart';
+import '../student/submit_feedback_screen.dart';
 
 class StudentDashboard extends StatelessWidget {
   const StudentDashboard({super.key});
