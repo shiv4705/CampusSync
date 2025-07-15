@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../auth/login_screen.dart';
 import '../student/submit_feedback_screen.dart';
+import '../student/student_timetable_screen.dart'; // <-- Add this import
 
 class StudentDashboard extends StatelessWidget {
   const StudentDashboard({super.key});
@@ -35,6 +37,20 @@ class StudentDashboard extends StatelessWidget {
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 30),
+
+            ElevatedButton.icon(
+              icon: const Icon(Icons.calendar_today),
+              label: const Text("View Timetable"),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => StudentTimetableScreen(),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
 
             ElevatedButton.icon(
               icon: const Icon(Icons.feedback),
