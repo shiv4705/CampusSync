@@ -21,8 +21,15 @@ class FacultyTimetableScreen extends StatelessWidget {
     '02:00 PM - 04:00 PM',
   ];
 
-  int getDayIndex(String day) => weekdayOrder.indexOf(day);
-  int getTimeIndex(String time) => timeSlots.indexOf(time);
+  int getDayIndex(String? day) {
+    final normalized = (day ?? '').trim().toLowerCase().capitalize();
+    return weekdayOrder.indexOf(normalized);
+  }
+
+  int getTimeIndex(String? time) {
+    final normalized = (time ?? '').trim();
+    return timeSlots.indexOf(normalized);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +58,7 @@ class FacultyTimetableScreen extends StatelessWidget {
           }
 
           final docs = snapshot.data?.docs ?? [];
+
           if (docs.isEmpty) {
             return const Center(child: Text("No timetable entries found."));
           }
@@ -60,12 +68,12 @@ class FacultyTimetableScreen extends StatelessWidget {
                 final dataA = a.data() as Map<String, dynamic>;
                 final dataB = b.data() as Map<String, dynamic>;
 
-                final dayA = getDayIndex(dataA['day'] ?? '');
-                final dayB = getDayIndex(dataB['day'] ?? '');
+                final dayA = getDayIndex(dataA['day']);
+                final dayB = getDayIndex(dataB['day']);
                 if (dayA != dayB) return dayA.compareTo(dayB);
 
-                final timeA = getTimeIndex(dataA['time'] ?? '');
-                final timeB = getTimeIndex(dataB['time'] ?? '');
+                final timeA = getTimeIndex(dataA['time']);
+                final timeB = getTimeIndex(dataB['time']);
                 return timeA.compareTo(timeB);
               });
 
@@ -100,5 +108,13 @@ class FacultyTimetableScreen extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+// Extension to capitalize first letter
+extension CapExtension on String {
+  String capitalize() {
+    if (isEmpty) return this;
+    return this[0].toUpperCase() + substring(1).toLowerCase();
   }
 }

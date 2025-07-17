@@ -58,19 +58,30 @@ class _AddUserScreenState extends State<AddUserScreen> {
     });
 
     try {
-      // Create user in Firebase Auth
+      // Create user in Firebase Authentication
       final userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
       final uid = userCredential.user!.uid;
 
-      // Store user info in Firestore
-      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+      // Prepare Firestore user data
+      final userData = {
         'uid': uid,
         'name': name,
         'email': email,
         'role': role,
         'createdAt': Timestamp.now(),
-      });
+      };
+
+      // Add default semester for students
+      if (role == 'student') {
+        userData['semester'] = '7';
+      }
+
+      // Store in Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .set(userData);
 
       setState(() {
         _message = "User '$name' created successfully as '$role'.";

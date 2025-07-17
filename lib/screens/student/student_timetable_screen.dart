@@ -22,8 +22,15 @@ class StudentTimetableScreen extends StatelessWidget {
     '02:00 PM - 04:00 PM',
   ];
 
-  int getDayIndex(String day) => orderedDays.indexOf(day);
-  int getTimeIndex(String time) => orderedTimes.indexOf(time);
+  // Normalize day string
+  int getDayIndex(String? day) {
+    return orderedDays.indexOf(day?.trim().toLowerCase().capitalize() ?? '');
+  }
+
+  // Normalize time string
+  int getTimeIndex(String? time) {
+    return orderedTimes.indexOf(time?.trim() ?? '');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,12 +62,12 @@ class StudentTimetableScreen extends StatelessWidget {
                 final dataA = a.data() as Map<String, dynamic>;
                 final dataB = b.data() as Map<String, dynamic>;
 
-                final dayA = getDayIndex(dataA['day'] ?? '');
-                final dayB = getDayIndex(dataB['day'] ?? '');
+                final dayA = getDayIndex(dataA['day']);
+                final dayB = getDayIndex(dataB['day']);
                 if (dayA != dayB) return dayA.compareTo(dayB);
 
-                final timeA = getTimeIndex(dataA['time'] ?? '');
-                final timeB = getTimeIndex(dataB['time'] ?? '');
+                final timeA = getTimeIndex(dataA['time']);
+                final timeB = getTimeIndex(dataB['time']);
                 return timeA.compareTo(timeB);
               });
 
@@ -95,5 +102,13 @@ class StudentTimetableScreen extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+// Extension to capitalize first letter of a string
+extension CapExtension on String {
+  String capitalize() {
+    if (isEmpty) return this;
+    return this[0].toUpperCase() + substring(1).toLowerCase();
   }
 }
