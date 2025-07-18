@@ -3,7 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../auth/login_screen.dart';
 import '../student/submit_feedback_screen.dart';
-import '../student/student_timetable_screen.dart'; // <-- Add this import
+import '../student/student_timetable_screen.dart';
+import '../student/student_attendance_screen.dart'; // Import the StudentAttendanceScreen
 
 class StudentDashboard extends StatelessWidget {
   const StudentDashboard({super.key});
@@ -60,6 +61,20 @@ class StudentDashboard extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (_) => const SubmitFeedbackScreen(),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+
+            ElevatedButton.icon(
+              icon: const Icon(Icons.fact_check),
+              label: const Text("View Attendance"),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const StudentAttendanceScreen(),
                   ),
                 );
               },
