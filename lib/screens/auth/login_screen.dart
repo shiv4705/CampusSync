@@ -148,12 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } on FirebaseAuthException catch (e) {
-      String message = "Login failed. Please try again.";
-      if (e.code == 'user-not-found') {
-        message = "No user found for that email.";
-      } else if (e.code == 'wrong-password') {
-        message = "Incorrect password.";
-      }
+      String message = "Please check your credentials and try again.";
       _showErrorDialog(message);
     } catch (_) {
       _showErrorDialog("Something went wrong. Try again.");
