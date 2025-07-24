@@ -11,44 +11,82 @@ class MarkAttendanceScreen extends StatefulWidget {
 }
 
 class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
-  String? selectedDocId;
+  String? selectedKey;
   String? selectedSubject;
   String? selectedSemester;
   String? selectedRoom;
+  String? selectedDate;
 
   List<Map<String, dynamic>> students = [];
   Set<String> presentEmails = {};
 
   bool isLoading = false;
-  List<DocumentSnapshot> todayClasses = [];
+  List<Map<String, dynamic>> unmarkedClasses = [];
 
   final currentUser = FirebaseAuth.instance.currentUser;
 
   @override
   void initState() {
     super.initState();
-    fetchTodayClasses();
+    fetchUnmarkedClasses();
   }
 
-  Future<void> fetchTodayClasses() async {
+  /// Step 1: Generate list of dates from Monday to today
+  List<DateTime> getWeekDatesUntilToday() {
+    final now = DateTime.now();
+    final weekday = now.weekday;
+    final monday = now.subtract(Duration(days: weekday - 1));
+    return List.generate(weekday, (i) => monday.add(Duration(days: i)));
+  }
+
+  /// Step 2: Fetch all unmarked classes for the week
+  Future<void> fetchUnmarkedClasses() async {
     setState(() => isLoading = true);
+    unmarkedClasses.clear();
 
-    final today = DateFormat('EEEE').format(DateTime.now()); // e.g., Monday
+    final email = currentUser!.email;
+    final dates = getWeekDatesUntilToday();
 
-    final snapshot =
-        await FirebaseFirestore.instance
-            .collection('timetable')
-            .where('email', isEqualTo: currentUser!.email)
-            .where('day', isEqualTo: today)
-            .get();
+    for (var date in dates) {
+      final dayName = DateFormat('EEEE').format(date); // e.g., Monday
+      final dateString = DateFormat('yyyy-MM-dd').format(date);
 
-    todayClasses = snapshot.docs;
+      final timetableSnap =
+          await FirebaseFirestore.instance
+              .collection('timetable')
+              .where('email', isEqualTo: email)
+              .where('day', isEqualTo: dayName)
+              .get();
+
+      for (var doc in timetableSnap.docs) {
+        final data = doc.data();
+        final subjectCode = (data['subject'] as String).split(" - ").first;
+        final attendanceId = '${dateString}_$subjectCode';
+
+        final attendanceSnap =
+            await FirebaseFirestore.instance
+                .collection('attendance')
+                .doc(attendanceId)
+                .get();
+
+        if (!attendanceSnap.exists) {
+          unmarkedClasses.add({
+            'key': '$attendanceId|$dateString',
+            'subject': data['subject'],
+            'semester': data['semester'],
+            'room': data['room'],
+            'date': dateString,
+            'time': data['time'],
+          });
+        }
+      }
+    }
+
     setState(() => isLoading = false);
   }
 
+  /// Step 3: Load students of selected semester
   Future<void> loadStudents(String semester) async {
-    print("Loading students for semester: $semester");
-
     final studentSnapshot =
         await FirebaseFirestore.instance
             .collection('users')
@@ -56,22 +94,19 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
             .where('semester', isEqualTo: semester)
             .get();
 
-    print("Found ${studentSnapshot.docs.length} students");
-
     students =
         studentSnapshot.docs
             .map((doc) => doc.data() as Map<String, dynamic>)
             .toList();
-
     setState(() {});
   }
 
+  /// Step 4: Submit attendance
   Future<void> submitAttendance() async {
-    final date = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final docId = '${date}_${selectedSubject?.split(" - ").first}';
+    final docId = selectedKey!.split('|').first;
 
     await FirebaseFirestore.instance.collection('attendance').doc(docId).set({
-      'date': date,
+      'date': selectedDate,
       'subject': selectedSubject,
       'facultyEmail': currentUser!.email,
       'semester': selectedSemester,
@@ -94,49 +129,55 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
       body:
           isLoading
               ? const Center(child: CircularProgressIndicator())
+              : unmarkedClasses.isEmpty
+              ? const Center(
+                child: Text(
+                  "No attendance remaining for this week",
+                  style: TextStyle(fontSize: 16),
+                ),
+              )
               : Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      /// Dropdown for today's classes
+                      /// Dropdown to select unmarked class
                       DropdownButtonFormField<String>(
-                        value: selectedDocId,
+                        value: selectedKey,
                         items:
-                            todayClasses.map((doc) {
-                              final data = doc.data() as Map<String, dynamic>;
-                              final display =
-                                  "${data['subject']} (${data['time']})";
-                              return DropdownMenuItem(
-                                value: doc.id,
-                                child: Text(display),
+                            unmarkedClasses.map<DropdownMenuItem<String>>((
+                              data,
+                            ) {
+                              final label =
+                                  "${data['subject']} (${data['date']} - ${data['time']})";
+                              return DropdownMenuItem<String>(
+                                value: data['key'],
+                                child: Text(label),
                               );
                             }).toList(),
-                        onChanged: (docId) async {
-                          final selectedDoc = todayClasses.firstWhere(
-                            (doc) => doc.id == docId,
+                        onChanged: (val) async {
+                          final selected = unmarkedClasses.firstWhere(
+                            (e) => e['key'] == val,
                           );
-                          final data =
-                              selectedDoc.data() as Map<String, dynamic>;
 
-                          selectedDocId = docId;
-                          selectedSubject = data['subject'];
-                          selectedSemester = data['semester'];
-                          selectedRoom = data['room'];
+                          selectedKey = val;
+                          selectedSubject = selected['subject'];
+                          selectedSemester = selected['semester'];
+                          selectedRoom = selected['room'];
+                          selectedDate = selected['date'];
                           presentEmails.clear();
 
                           await loadStudents(selectedSemester!);
-                          setState(() {});
                         },
                         decoration: const InputDecoration(
-                          labelText: "Select Class",
+                          labelText: "Select Class (Unmarked)",
                           border: OutlineInputBorder(),
                         ),
                       ),
 
                       const SizedBox(height: 20),
 
-                      /// List of students
+                      /// List of students to mark
                       if (students.isNotEmpty)
                         ListView.builder(
                           shrinkWrap: true,
@@ -165,7 +206,6 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                           },
                         ),
 
-                      /// Submit Button
                       if (students.isNotEmpty) const SizedBox(height: 12),
                       if (students.isNotEmpty)
                         ElevatedButton.icon(
