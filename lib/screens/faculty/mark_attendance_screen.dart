@@ -31,7 +31,6 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     fetchUnmarkedClasses();
   }
 
-  /// Step 1: Generate list of dates from Monday to today
   List<DateTime> getWeekDatesUntilToday() {
     final now = DateTime.now();
     final weekday = now.weekday;
@@ -39,7 +38,6 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     return List.generate(weekday, (i) => monday.add(Duration(days: i)));
   }
 
-  /// Step 2: Fetch all unmarked classes for the week
   Future<void> fetchUnmarkedClasses() async {
     setState(() => isLoading = true);
     unmarkedClasses.clear();
@@ -48,7 +46,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     final dates = getWeekDatesUntilToday();
 
     for (var date in dates) {
-      final dayName = DateFormat('EEEE').format(date); // e.g., Monday
+      final dayName = DateFormat('EEEE').format(date);
       final dateString = DateFormat('yyyy-MM-dd').format(date);
 
       final timetableSnap =
@@ -62,6 +60,8 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
         final data = doc.data();
         final subjectCode = (data['subject'] as String).split(" - ").first;
         final attendanceId = '${dateString}_$subjectCode';
+        final time = data['time'];
+        final uniqueKey = '$attendanceId|$dateString|$time';
 
         final attendanceSnap =
             await FirebaseFirestore.instance
@@ -71,12 +71,12 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
 
         if (!attendanceSnap.exists) {
           unmarkedClasses.add({
-            'key': '$attendanceId|$dateString',
+            'key': uniqueKey,
             'subject': data['subject'],
             'semester': data['semester'],
             'room': data['room'],
             'date': dateString,
-            'time': data['time'],
+            'time': time,
           });
         }
       }
@@ -85,7 +85,6 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     setState(() => isLoading = false);
   }
 
-  /// Step 3: Load students of selected semester
   Future<void> loadStudents(String semester) async {
     final studentSnapshot =
         await FirebaseFirestore.instance
@@ -101,9 +100,9 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     setState(() {});
   }
 
-  /// Step 4: Submit attendance
   Future<void> submitAttendance() async {
-    final docId = selectedKey!.split('|').first;
+    final parts = selectedKey!.split('|');
+    final docId = parts[0];
 
     await FirebaseFirestore.instance.collection('attendance').doc(docId).set({
       'date': selectedDate,
@@ -119,7 +118,17 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
       const SnackBar(content: Text("Attendance submitted successfully")),
     );
 
-    Navigator.pop(context);
+    setState(() {
+      selectedKey = null;
+      selectedSubject = null;
+      selectedSemester = null;
+      selectedRoom = null;
+      selectedDate = null;
+      students.clear();
+      presentEmails.clear();
+    });
+
+    await fetchUnmarkedClasses();
   }
 
   @override
@@ -141,17 +150,22 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      /// Dropdown to select unmarked class
+                      /// Dropdown
                       DropdownButtonFormField<String>(
-                        value: selectedKey,
+                        value:
+                            (selectedKey != null &&
+                                    unmarkedClasses.any(
+                                      (e) => e['key'] == selectedKey,
+                                    ))
+                                ? selectedKey
+                                : null,
                         items:
-                            unmarkedClasses.map<DropdownMenuItem<String>>((
-                              data,
-                            ) {
+                            unmarkedClasses.map((data) {
+                              final key = data['key'].toString().trim();
                               final label =
                                   "${data['subject']} (${data['date']} - ${data['time']})";
                               return DropdownMenuItem<String>(
-                                value: data['key'],
+                                value: key,
                                 child: Text(label),
                               );
                             }).toList(),
@@ -160,12 +174,15 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                             (e) => e['key'] == val,
                           );
 
-                          selectedKey = val;
-                          selectedSubject = selected['subject'];
-                          selectedSemester = selected['semester'];
-                          selectedRoom = selected['room'];
-                          selectedDate = selected['date'];
-                          presentEmails.clear();
+                          setState(() {
+                            selectedKey = val;
+                            selectedSubject = selected['subject'];
+                            selectedSemester = selected['semester'];
+                            selectedRoom = selected['room'];
+                            selectedDate = selected['date'];
+                            presentEmails.clear();
+                            students.clear();
+                          });
 
                           await loadStudents(selectedSemester!);
                         },
@@ -177,7 +194,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
 
                       const SizedBox(height: 20),
 
-                      /// List of students to mark
+                      /// Students list
                       if (students.isNotEmpty)
                         ListView.builder(
                           shrinkWrap: true,

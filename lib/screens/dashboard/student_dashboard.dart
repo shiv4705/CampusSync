@@ -4,13 +4,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../auth/login_screen.dart';
 import '../student/submit_feedback_screen.dart';
 import '../student/student_timetable_screen.dart';
-import '../student/student_attendance_screen.dart'; // Import the StudentAttendanceScreen
+import '../student/student_attendance_screen.dart';
 
 class StudentDashboard extends StatelessWidget {
   const StudentDashboard({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final String? studentEmail = FirebaseAuth.instance.currentUser?.email;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Student Dashboard"),
@@ -45,9 +47,7 @@ class StudentDashboard extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => StudentTimetableScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => StudentTimetableScreen()),
                 );
               },
             ),
@@ -71,12 +71,23 @@ class StudentDashboard extends StatelessWidget {
               icon: const Icon(Icons.fact_check),
               label: const Text("View Attendance"),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const StudentAttendanceScreen(),
-                  ),
-                );
+                if (studentEmail != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (_) => StudentAttendanceScreen(
+                            studentEmail: studentEmail,
+                          ),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Error: Unable to fetch student email."),
+                    ),
+                  );
+                }
               },
             ),
 
