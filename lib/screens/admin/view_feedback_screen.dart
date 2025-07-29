@@ -1,9 +1,30 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
-class ViewFeedbackScreen extends StatelessWidget {
+class ViewFeedbackScreen extends StatefulWidget {
   const ViewFeedbackScreen({super.key});
+
+  @override
+  State<ViewFeedbackScreen> createState() => _ViewFeedbackScreenState();
+}
+
+class _ViewFeedbackScreenState extends State<ViewFeedbackScreen>
+    with TickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   String _formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return "Unknown time";
@@ -15,12 +36,19 @@ class ViewFeedbackScreen extends StatelessWidget {
       context: context,
       builder:
           (_) => AlertDialog(
-            title: Text(title),
-            content: Text(message),
+            backgroundColor: const Color(0xFF0D1D50),
+            title: Text(title, style: const TextStyle(color: Colors.white)),
+            content: Text(
+              message,
+              style: const TextStyle(color: Colors.white70),
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text("Close"),
+                child: const Text(
+                  "Close",
+                  style: TextStyle(color: Colors.blueAccent),
+                ),
               ),
             ],
           ),
@@ -29,55 +57,122 @@ class ViewFeedbackScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const Color darkBlue1 = Color(0xFF0A152E);
+    const Color darkBlue2 = Color(0xFF0D1D50);
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Student Feedback")),
-      body: StreamBuilder<QuerySnapshot>(
-        stream:
-            FirebaseFirestore.instance
-                .collection('feedback')
-                .orderBy('timestamp', descending: true)
-                .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(child: Text("Error loading feedback"));
-          }
+      backgroundColor: darkBlue2,
+      appBar: AppBar(
+        backgroundColor: darkBlue2,
+        elevation: 0,
+        title: const Text(
+          "Feedback",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [darkBlue1, darkBlue2],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: StreamBuilder<QuerySnapshot>(
+          stream:
+              FirebaseFirestore.instance
+                  .collection('feedback')
+                  .orderBy('timestamp', descending: true)
+                  .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(color: Colors.blueAccent),
+              );
+            }
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final feedbackDocs = snapshot.data?.docs ?? [];
-
-          if (feedbackDocs.isEmpty) {
-            return const Center(child: Text("No feedback submitted."));
-          }
-
-          return ListView.builder(
-            itemCount: feedbackDocs.length,
-            itemBuilder: (context, index) {
-              final doc = feedbackDocs[index];
-              final data = doc.data() as Map<String, dynamic>;
-
-              final title = data['title'] ?? 'No Title';
-              final message = data['message'] ?? 'No Message';
-              final timestamp = data['timestamp'] as Timestamp?;
-
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                elevation: 3,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: ListTile(
-                  leading: const Icon(Icons.feedback_outlined),
-                  title: Text(title),
-                  subtitle: Text(_formatTimestamp(timestamp)),
-                  onTap: () => _showMessageDialog(context, title, message),
+            if (snapshot.hasError) {
+              return const Center(
+                child: Text(
+                  "Error loading feedback",
+                  style: TextStyle(color: Colors.redAccent),
                 ),
               );
-            },
-          );
-        },
+            }
+
+            final feedbackDocs = snapshot.data?.docs ?? [];
+
+            if (feedbackDocs.isEmpty) {
+              return const Center(
+                child: Text(
+                  "No feedback submitted.",
+                  style: TextStyle(color: Colors.white70, fontSize: 16),
+                ),
+              );
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: feedbackDocs.length,
+              itemBuilder: (context, index) {
+                final doc = feedbackDocs[index];
+                final data = doc.data() as Map<String, dynamic>;
+
+                final title = data['title'] ?? 'No Title';
+                final message = data['message'] ?? 'No Message';
+                final timestamp = data['timestamp'] as Timestamp?;
+
+                // Animation for each card (staggered)
+                final AnimationController animController = AnimationController(
+                  duration: const Duration(milliseconds: 500),
+                  vsync: this,
+                );
+                final Animation<double> fadeAnim = CurvedAnimation(
+                  parent: animController,
+                  curve: Curves.easeIn,
+                );
+
+                Timer(Duration(milliseconds: 100 * index), () {
+                  if (mounted) animController.forward();
+                });
+
+                return FadeTransition(
+                  opacity: fadeAnim,
+                  child: Card(
+                    color: Colors.white.withOpacity(0.08),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                    ),
+                    elevation: 4,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    child: ListTile(
+                      leading: const CircleAvatar(
+                        backgroundColor: Colors.blueAccent,
+                        child: Icon(
+                          Icons.feedback_outlined,
+                          color: Colors.white,
+                        ),
+                      ),
+                      title: Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        _formatTimestamp(timestamp),
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                      onTap: () => _showMessageDialog(context, title, message),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
