@@ -16,6 +16,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
   String? selectedSemester;
   String? selectedRoom;
   String? selectedDate;
+  String? selectedTime;
 
   List<Map<String, dynamic>> students = [];
   Set<String> presentEmails = {};
@@ -24,6 +25,10 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
   List<Map<String, dynamic>> unmarkedClasses = [];
 
   final currentUser = FirebaseAuth.instance.currentUser;
+
+  // Colors
+  final Color darkBlue1 = const Color(0xFF091227);
+  final Color darkBlue2 = const Color(0xFF0D1D50);
 
   @override
   void initState() {
@@ -124,6 +129,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
       selectedSemester = null;
       selectedRoom = null;
       selectedDate = null;
+      selectedTime = null;
       students.clear();
       presentEmails.clear();
     });
@@ -131,27 +137,48 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     await fetchUnmarkedClasses();
   }
 
+  void toggleSelectAll() {
+    setState(() {
+      if (presentEmails.length == students.length) {
+        presentEmails.clear();
+      } else {
+        presentEmails = students.map((e) => e['email'] as String).toSet();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Mark Attendance")),
+      backgroundColor: darkBlue1,
+      appBar: AppBar(
+        backgroundColor: darkBlue2,
+        title: const Text("Mark Attendance"),
+      ),
       body:
           isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(
+                child: CircularProgressIndicator(color: Colors.blueAccent),
+              )
               : unmarkedClasses.isEmpty
               ? const Center(
                 child: Text(
                   "No attendance remaining for this week",
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(fontSize: 16, color: Colors.white70),
                 ),
               )
-              : Padding(
-                padding: const EdgeInsets.all(16.0),
+              : Container(
+                color: darkBlue1,
+                padding: const EdgeInsets.all(16),
                 child: SingleChildScrollView(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       /// Dropdown
                       DropdownButtonFormField<String>(
+                        dropdownColor: darkBlue1,
+                        style: const TextStyle(color: Colors.white),
+                        isExpanded: true,
                         value:
                             (selectedKey != null &&
                                     unmarkedClasses.any(
@@ -162,11 +189,18 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                         items:
                             unmarkedClasses.map((data) {
                               final key = data['key'].toString().trim();
+                              final subjectCode =
+                                  (data['subject'] as String)
+                                      .split(" - ")
+                                      .first;
                               final label =
-                                  "${data['subject']} (${data['date']} - ${data['time']})";
+                                  "$subjectCode | ${data['date']} | ${data['time']}";
                               return DropdownMenuItem<String>(
                                 value: key,
-                                child: Text(label),
+                                child: Text(
+                                  label,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               );
                             }).toList(),
                         onChanged: (val) async {
@@ -180,21 +214,87 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                             selectedSemester = selected['semester'];
                             selectedRoom = selected['room'];
                             selectedDate = selected['date'];
+                            selectedTime = selected['time'];
                             presentEmails.clear();
                             students.clear();
                           });
 
                           await loadStudents(selectedSemester!);
                         },
-                        decoration: const InputDecoration(
-                          labelText: "Select Class (Unmarked)",
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: darkBlue1,
+                          labelText: "Select Class",
+                          labelStyle: const TextStyle(color: Colors.white70),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.white54),
+                          ),
                         ),
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
 
-                      /// Students list
+                      /// Show class details
+                      if (selectedKey != null)
+                        Card(
+                          color: Colors.white.withOpacity(0.08),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Subject: $selectedSubject",
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                                Text(
+                                  "Date: $selectedDate",
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                                Text(
+                                  "Time: $selectedTime",
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                                Text(
+                                  "Semester: $selectedSemester",
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                                Text(
+                                  "Room: $selectedRoom",
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                      /// Select All Button
+                      if (students.isNotEmpty)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: toggleSelectAll,
+                            icon: Icon(
+                              presentEmails.length == students.length
+                                  ? Icons.remove_done
+                                  : Icons.done_all,
+                              color: Colors.white70,
+                            ),
+                            label: Text(
+                              presentEmails.length == students.length
+                                  ? "Deselect All"
+                                  : "Select All",
+                              style: const TextStyle(color: Colors.white70),
+                            ),
+                          ),
+                        ),
+
+                      /// Students List
                       if (students.isNotEmpty)
                         ListView.builder(
                           shrinkWrap: true,
@@ -208,8 +308,14 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
 
                             return CheckboxListTile(
                               value: isPresent,
-                              title: Text(name),
-                              subtitle: Text(email),
+                              title: Text(
+                                name,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              subtitle: Text(
+                                email,
+                                style: const TextStyle(color: Colors.white70),
+                              ),
                               onChanged: (val) {
                                 setState(() {
                                   if (val == true) {
@@ -223,12 +329,26 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                           },
                         ),
 
-                      if (students.isNotEmpty) const SizedBox(height: 12),
+                      const SizedBox(height: 12),
+
+                      /// Submit Button
                       if (students.isNotEmpty)
-                        ElevatedButton.icon(
-                          onPressed: submitAttendance,
-                          icon: const Icon(Icons.check),
-                          label: const Text("Submit Attendance"),
+                        Center(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blueAccent,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
+                              ),
+                            ),
+                            onPressed: submitAttendance,
+                            icon: const Icon(Icons.check, color: Colors.white),
+                            label: const Text(
+                              "Submit Attendance",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
                         ),
                     ],
                   ),

@@ -40,78 +40,182 @@ class FacultyTimetableScreen extends StatelessWidget {
 
     final facultyEmail = currentUser.email ?? '';
 
+    const Color darkBlue1 = Color(0xFF091227);
+    const Color darkBlue2 = Color(0xFF0D1D50);
+
     return Scaffold(
-      appBar: AppBar(title: const Text("My Timetable (Table View)")),
-      body: StreamBuilder<QuerySnapshot>(
-        stream:
-            FirebaseFirestore.instance
-                .collection('timetable')
-                .where('email', isEqualTo: facultyEmail)
-                .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(child: Text("Error loading timetable"));
-          }
+      backgroundColor: darkBlue2,
+      appBar: AppBar(
+        backgroundColor: darkBlue2,
+        elevation: 0,
+        title: const Text(
+          "My Timetable",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [darkBlue1, darkBlue2],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: StreamBuilder<QuerySnapshot>(
+          stream:
+              FirebaseFirestore.instance
+                  .collection('timetable')
+                  .where('email', isEqualTo: facultyEmail)
+                  .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return const Center(
+                child: Text(
+                  "Error loading timetable",
+                  style: TextStyle(color: Colors.redAccent),
+                ),
+              );
+            }
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(color: Colors.blueAccent),
+              );
+            }
 
-          final docs = snapshot.data?.docs ?? [];
+            final docs = snapshot.data?.docs ?? [];
 
-          if (docs.isEmpty) {
-            return const Center(child: Text("No timetable entries found."));
-          }
+            if (docs.isEmpty) {
+              return const Center(
+                child: Text(
+                  "No timetable entries found.",
+                  style: TextStyle(color: Colors.white70, fontSize: 16),
+                ),
+              );
+            }
 
-          final sortedDocs =
-              docs.toList()..sort((a, b) {
-                final dataA = a.data() as Map<String, dynamic>;
-                final dataB = b.data() as Map<String, dynamic>;
+            // Sort docs first by day, then by time
+            final sortedDocs =
+                docs.toList()..sort((a, b) {
+                  final dataA = a.data() as Map<String, dynamic>;
+                  final dataB = b.data() as Map<String, dynamic>;
 
-                final dayA = getDayIndex(dataA['day']);
-                final dayB = getDayIndex(dataB['day']);
-                if (dayA != dayB) return dayA.compareTo(dayB);
+                  final dayA = getDayIndex(dataA['day']);
+                  final dayB = getDayIndex(dataB['day']);
+                  if (dayA != dayB) return dayA.compareTo(dayB);
 
-                final timeA = getTimeIndex(dataA['time']);
-                final timeB = getTimeIndex(dataB['time']);
-                return timeA.compareTo(timeB);
-              });
+                  final timeA = getTimeIndex(dataA['time']);
+                  final timeB = getTimeIndex(dataB['time']);
+                  return timeA.compareTo(timeB);
+                });
 
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              headingRowColor: MaterialStateProperty.all(Colors.grey[200]),
-              columns: const [
-                DataColumn(label: Text("Day")),
-                DataColumn(label: Text("Time")),
-                DataColumn(label: Text("Subject")),
-                DataColumn(label: Text("Type")),
-                DataColumn(label: Text("Semester")),
-                DataColumn(label: Text("Room")),
-              ],
-              rows:
-                  sortedDocs.map((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    return DataRow(
-                      cells: [
-                        DataCell(Text(data['day'] ?? '')),
-                        DataCell(Text(data['time'] ?? '')),
-                        DataCell(Text(data['subject'] ?? '')),
-                        DataCell(Text(data['type'] ?? '')),
-                        DataCell(Text(data['semester'] ?? '')),
-                        DataCell(Text(data['room'] ?? '')),
-                      ],
+            // Group timetable by day
+            Map<String, List<Map<String, dynamic>>> timetableByDay = {};
+            for (var doc in sortedDocs) {
+              final data = doc.data() as Map<String, dynamic>;
+              final day = data['day'] ?? 'Unknown';
+              timetableByDay.putIfAbsent(day, () => []).add(data);
+            }
+
+            return ListView(
+              padding: const EdgeInsets.all(12),
+              children:
+                  weekdayOrder.map((day) {
+                    final dayClasses = timetableByDay[day] ?? [];
+
+                    return Card(
+                      color: Colors.white.withOpacity(0.06),
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ExpansionTile(
+                        iconColor: Colors.blueAccent,
+                        collapsedIconColor: Colors.white70,
+                        title: Text(
+                          day,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        children:
+                            dayClasses.isEmpty
+                                ? [
+                                  const Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: Text(
+                                      "No classes scheduled.",
+                                      style: TextStyle(color: Colors.white70),
+                                    ),
+                                  ),
+                                ]
+                                : dayClasses.map((data) {
+                                  final subjectCode =
+                                      data['subject'] ?? 'Unknown';
+                                  final time = data['time'] ?? 'N/A';
+                                  final type = data['type'] ?? 'Lecture';
+                                  final semester = data['semester'] ?? '-';
+                                  final room = data['room'] ?? '-';
+
+                                  return Card(
+                                    color: Colors.white.withOpacity(0.08),
+                                    margin: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      side: BorderSide(
+                                        color: Colors.white.withOpacity(0.1),
+                                      ),
+                                    ),
+                                    child: ListTile(
+                                      contentPadding: const EdgeInsets.all(12),
+                                      title: Text(
+                                        subjectCode,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      subtitle: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "$time • $type",
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                          Text(
+                                            "Semester: $semester • Room: $room",
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                      ),
                     );
                   }).toList(),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
 }
 
-// Extension to capitalize first letter
+// ✅ Capitalize extension
 extension CapExtension on String {
   String capitalize() {
     if (isEmpty) return this;
