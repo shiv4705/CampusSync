@@ -109,9 +109,10 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
   @override
   Widget build(BuildContext context) {
     const Color darkBlue2 = Color(0xFF0D1D50);
+    const Color darkBlue1 = Color(0xFF091227);
 
     return Scaffold(
-      backgroundColor: darkBlue2,
+      backgroundColor: darkBlue1,
       appBar: AppBar(
         title: const Text("Your Attendance"),
         backgroundColor: darkBlue2,
