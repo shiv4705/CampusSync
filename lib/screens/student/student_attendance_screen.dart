@@ -47,7 +47,6 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
       allDocs.add({...data, 'marked': isPresent, 'type': inferredType});
     }
 
-    // Grouping
     final Map<String, List<Map<String, dynamic>>> subjectWise = {};
     final Map<String, List<Map<String, dynamic>>> dateWise = {};
     int total = 0,
@@ -63,7 +62,7 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
       final isPresent = doc['marked'] == true;
       final type = doc['type'];
 
-      final subjectKey = "$subject (${type})"; // Capitalized already
+      final subjectKey = "$subject ($type)";
       subjectWise.putIfAbsent(subjectKey, () => []).add(doc);
       dateWise.putIfAbsent(date, () => []).add(doc);
 
@@ -79,7 +78,6 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
       }
     }
 
-    // Sort subject keys namewise, Lecture before Lab
     final sortedSubjectWise = Map.fromEntries(
       subjectWise.entries.toList()..sort((a, b) {
         final subjectA = a.key.split(' (')[0];
@@ -88,7 +86,7 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
         final typeB = b.key.contains('Lab') ? 1 : 0;
         return subjectA.compareTo(subjectB) != 0
             ? subjectA.compareTo(subjectB)
-            : typeA.compareTo(typeB); // Lecture (0) comes before Lab (1)
+            : typeA.compareTo(typeB);
       }),
     );
 
@@ -105,53 +103,93 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
   }
 
   Color statusColor(bool marked) {
-    return marked ? Colors.green : Colors.red;
+    return marked ? Colors.greenAccent : Colors.redAccent;
   }
 
   @override
   Widget build(BuildContext context) {
+    const Color darkBlue2 = Color(0xFF0D1D50);
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Your Attendance")),
+      backgroundColor: darkBlue2,
+      appBar: AppBar(
+        title: const Text("Your Attendance"),
+        backgroundColor: darkBlue2,
+        elevation: 0,
+      ),
       body:
           isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(
+                child: CircularProgressIndicator(color: Colors.blueAccent),
+              )
               : Column(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
+                  // LARGE ATTENDANCE SUMMARY CARD
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 20,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white24),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
                           "Attendance Summary",
                           style: TextStyle(
-                            fontSize: 18,
+                            color: Colors.white,
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text("Overall: ${totalAttendance.toStringAsFixed(2)}%"),
-                        Text(
-                          "Lecture: ${lectureAttendance.toStringAsFixed(2)}%",
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _buildAttendanceCircle(
+                              "Overall",
+                              totalAttendance,
+                              Colors.blueAccent,
+                            ),
+                            _buildAttendanceCircle(
+                              "Lecture",
+                              lectureAttendance,
+                              Colors.greenAccent,
+                            ),
+                            _buildAttendanceCircle(
+                              "Lab",
+                              labAttendance,
+                              Colors.orangeAccent,
+                            ),
+                          ],
                         ),
-                        Text("Lab: ${labAttendance.toStringAsFixed(2)}%"),
                       ],
                     ),
                   ),
+
+                  // Tabs
                   TabBar(
                     controller: _tabController,
-                    labelColor: Theme.of(context).primaryColor,
-                    unselectedLabelColor: Colors.grey,
+                    indicatorColor: Colors.blueAccent,
+                    labelColor: Colors.blueAccent,
+                    unselectedLabelColor: Colors.white54,
                     tabs: const [
                       Tab(icon: Icon(Icons.book), text: "Subject-wise"),
                       Tab(icon: Icon(Icons.calendar_today), text: "Day-wise"),
                     ],
                   ),
+
                   Expanded(
                     child: TabBarView(
                       controller: _tabController,
                       children: [
-                        /// SUBJECT-WISE TAB
+                        // Subject-wise Tab
                         ListView(
                           padding: const EdgeInsets.all(16),
                           children:
@@ -164,15 +202,30 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
                                 final percentage =
                                     (presentCount / totalCount) * 100;
 
-                                return Card(
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.white24),
+                                  ),
                                   child: ListTile(
-                                    title: Text(entry.key),
+                                    title: Text(
+                                      entry.key,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                     subtitle: Text(
                                       "$presentCount / $totalCount Present",
+                                      style: const TextStyle(
+                                        color: Colors.white54,
+                                      ),
                                     ),
                                     trailing: Text(
                                       "${percentage.toStringAsFixed(1)}%",
                                       style: const TextStyle(
+                                        color: Colors.blueAccent,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -181,7 +234,7 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
                               }).toList(),
                         ),
 
-                        /// DAY-WISE TAB
+                        // Day-wise Tab
                         Column(
                           children: [
                             TableCalendar(
@@ -189,6 +242,38 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
                               lastDay: DateTime.utc(2030, 12, 31),
                               focusedDay: selectedDate,
                               calendarFormat: CalendarFormat.week,
+                              daysOfWeekStyle: const DaysOfWeekStyle(
+                                weekdayStyle: TextStyle(color: Colors.white),
+                                weekendStyle: TextStyle(color: Colors.white),
+                              ),
+                              calendarStyle: const CalendarStyle(
+                                defaultTextStyle: TextStyle(
+                                  color: Colors.white,
+                                ),
+                                weekendTextStyle: TextStyle(
+                                  color: Colors.white,
+                                ),
+                                selectedDecoration: BoxDecoration(
+                                  color: Colors.blueAccent,
+                                  shape: BoxShape.circle,
+                                ),
+                                todayDecoration: BoxDecoration(
+                                  color: Colors.blueGrey,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              headerStyle: const HeaderStyle(
+                                titleTextStyle: TextStyle(color: Colors.white),
+                                formatButtonVisible: false,
+                                leftChevronIcon: Icon(
+                                  Icons.chevron_left,
+                                  color: Colors.white,
+                                ),
+                                rightChevronIcon: Icon(
+                                  Icons.chevron_right,
+                                  color: Colors.white,
+                                ),
+                              ),
                               selectedDayPredicate:
                                   (day) => isSameDay(day, selectedDate),
                               onDaySelected: (selectedDay, _) {
@@ -204,6 +289,8 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
                                     "Attendance for ${DateFormat('yyyy-MM-dd').format(selectedDate)}",
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      fontSize: 16,
                                     ),
                                   ),
                                   const SizedBox(height: 8),
@@ -215,13 +302,32 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
                                                 (e['room'] == '111')
                                                     ? 'Lecture'
                                                     : 'Lab';
-                                            return Card(
+                                            return Container(
+                                              margin: const EdgeInsets.only(
+                                                bottom: 12,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(
+                                                  0.08,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: Colors.white24,
+                                                ),
+                                              ),
                                               child: ListTile(
                                                 title: Text(
                                                   e['subject'] ?? 'Unknown',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                  ),
                                                 ),
                                                 subtitle: Text(
                                                   "$inferredType | Room: ${e['room']}",
+                                                  style: const TextStyle(
+                                                    color: Colors.white54,
+                                                  ),
                                                 ),
                                                 trailing: Text(
                                                   e['marked'] == true
@@ -244,6 +350,9 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
                                           child: Center(
                                             child: Text(
                                               "No attendance data for this day.",
+                                              style: TextStyle(
+                                                color: Colors.white54,
+                                              ),
                                             ),
                                           ),
                                         ),
@@ -258,6 +367,43 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
                   ),
                 ],
               ),
+    );
+  }
+
+  Widget _buildAttendanceCircle(String title, double value, Color color) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 80,
+          width: 80,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              CircularProgressIndicator(
+                value: value / 100,
+                backgroundColor: Colors.white12,
+                color: color,
+                strokeWidth: 8,
+              ),
+              Center(
+                child: Text(
+                  "${value.toStringAsFixed(0)}%",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          title,
+          style: const TextStyle(color: Colors.white70, fontSize: 14),
+        ),
+      ],
     );
   }
 
