@@ -7,6 +7,7 @@ import '../admin/add_user_screen.dart';
 import '../admin/view_feedback_screen.dart';
 import '../admin/view_all_users_screen.dart';
 import '../admin/timetable/manage_timetable_screen.dart';
+import '../admin/assign_subject_screen.dart'; // ⬅️ NEW import
 import '../auth/login_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -25,16 +26,14 @@ class _AdminDashboardState extends State<AdminDashboard>
   @override
   void initState() {
     super.initState();
-
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
 
-    // Number of cards
-    int itemCount = 5;
+    // Updated item count
+    int itemCount = 6;
 
-    // Create staggered animations
     _fadeAnimations = List.generate(itemCount, (index) {
       final start = index * 0.1;
       final end = start + 0.4;
@@ -60,7 +59,6 @@ class _AdminDashboardState extends State<AdminDashboard>
       );
     });
 
-    // Start animation
     _controller.forward();
   }
 
@@ -101,6 +99,11 @@ class _AdminDashboardState extends State<AdminDashboard>
         "title": "Manage Timetable",
         "icon": Icons.calendar_month_outlined,
         "page": const ManageTimetableScreen(),
+      },
+      {
+        "title": "Assign Subject", // ⬅️ New menu
+        "icon": Icons.book_outlined,
+        "page": AdminAssignSubjectScreen(), // ⬅️ from earlier code
       },
     ];
 
@@ -179,7 +182,6 @@ class _AdminDashboardState extends State<AdminDashboard>
     );
   }
 
-  // Premium Card Widget with Hover/Tap Glow
   Widget _buildDashboardCard(
     BuildContext context, {
     required String title,
@@ -190,7 +192,6 @@ class _AdminDashboardState extends State<AdminDashboard>
     return StatefulBuilder(
       builder: (context, setState) {
         bool isHovered = false;
-
         return MouseRegion(
           onEnter: (_) => setState(() => isHovered = true),
           onExit: (_) => setState(() => isHovered = false),

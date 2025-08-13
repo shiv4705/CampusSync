@@ -11,9 +11,10 @@ class AddTimetableScreen extends StatefulWidget {
 class _AddTimetableScreenState extends State<AddTimetableScreen> {
   final _formKey = GlobalKey<FormState>();
   final Map<String, dynamic> _data = {
-    'faculty': '',
-    'email': '',
-    'subject': '',
+    'facultyName': '',
+    'facultyId': '',
+    'subjectCode': '',
+    'subjectName': '',
     'type': 'Lecture',
     'day': '',
     'time': '',
@@ -28,12 +29,6 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
     'Friday',
   ];
   final List<String> _types = ['Lecture', 'Lab'];
-  final Map<String, String> _subjects = {
-    'MAD101': 'Mobile App Development',
-    'DSA102': 'Data Structures & Algorithms',
-    'DBMS103': 'Database Management Systems',
-    'SGP104': 'Software Group Project',
-  };
   final List<String> _timeSlots = [
     '09:00 AM - 10:00 AM',
     '10:00 AM - 11:00 AM',
@@ -43,8 +38,9 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
   ];
   final List<String> _rooms = ['111', '112'];
 
-  Map<String, String> _facultyEmailMap = {};
-  bool _isLoadingFaculty = true;
+  bool _isLoadingSubjects = true;
+  List<Map<String, dynamic>> _subjects = [];
+  String? _selectedFacultyName;
 
   final Color primaryColor = const Color(0xFF9AB6FF);
   final Color darkBlue1 = const Color(0xFF0A152E);
@@ -53,46 +49,40 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchFacultyList();
+    _fetchSubjects();
   }
 
-  Future<void> _fetchFacultyList() async {
+  Future<void> _fetchSubjects() async {
     try {
       final snapshot =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .where('role', isEqualTo: 'faculty')
-              .get();
-
-      final Map<String, String> facultyMap = {};
-      for (var doc in snapshot.docs) {
-        final name = doc['name'] ?? '';
-        final email = doc['email'] ?? '';
-        if (name.isNotEmpty && email.isNotEmpty) {
-          facultyMap[name] = email;
-        }
-      }
+          await FirebaseFirestore.instance.collection('subjects').get();
+      final List<Map<String, dynamic>> subjectsList =
+          snapshot.docs.map((doc) {
+            return {
+              'subjectCode': doc['subjectCode'] ?? '',
+              'subjectName': doc['subjectName'] ?? '',
+              'facultyName': doc['facultyName'] ?? '',
+              'facultyId': doc['facultyId'] ?? '',
+            };
+          }).toList();
 
       setState(() {
-        _facultyEmailMap = facultyMap;
-        _isLoadingFaculty = false;
+        _subjects = subjectsList;
+        _isLoadingSubjects = false;
       });
     } catch (e) {
-      setState(() => _isLoadingFaculty = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Error fetching faculty list.")),
-      );
+      setState(() => _isLoadingSubjects = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Error fetching subjects.")));
     }
   }
 
   Future<void> _save() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      _data['email'] = _facultyEmailMap[_data['faculty']] ?? '';
-      _data['semester'] = '7'; // Always store semester as 7
 
       try {
-        // ✅ Check for clash
         final clashQuery =
             await FirebaseFirestore.instance
                 .collection('timetable')
@@ -149,7 +139,7 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
         elevation: 0,
       ),
       body:
-          _isLoadingFaculty
+          _isLoadingSubjects
               ? const Center(
                 child: CircularProgressIndicator(color: Colors.blueAccent),
               )
@@ -176,63 +166,45 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
                         DropdownButtonFormField(
                           isExpanded: true,
                           items:
-                              _facultyEmailMap.keys
-                                  .map(
-                                    (f) => DropdownMenuItem(
-                                      value: f,
-                                      child: Text(
-                                        f,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged:
-                              (val) => setState(() => _data['faculty'] = val),
-                          onSaved: (val) => _data['faculty'] = val,
-                          decoration: _inputDecoration("Faculty"),
-                          validator:
-                              (val) =>
-                                  val == null || val.isEmpty
-                                      ? 'Required'
-                                      : null,
-                          dropdownColor: darkBlue1,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        DropdownButtonFormField(
-                          isExpanded: true,
-                          items:
-                              _subjects.entries
-                                  .map(
-                                    (e) => DropdownMenuItem(
-                                      value: '${e.key} - ${e.value}',
-                                      child: Text(
-                                        '${e.key} - ${e.value}',
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged:
-                              (val) => setState(() => _data['subject'] = val),
-                          onSaved: (val) => _data['subject'] = val,
+                              _subjects.map((s) {
+                                return DropdownMenuItem(
+                                  value: s,
+                                  child: Text(
+                                    "${s['subjectCode']} - ${s['subjectName']}",
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                );
+                              }).toList(),
+                          onChanged: (val) {
+                            final selected = val as Map<String, dynamic>;
+                            setState(() {
+                              _data['subjectCode'] = selected['subjectCode'];
+                              _data['subjectName'] = selected['subjectName'];
+                              _data['facultyName'] = selected['facultyName'];
+                              _data['facultyId'] = selected['facultyId'];
+                              _selectedFacultyName = selected['facultyName'];
+                            });
+                          },
+                          validator: (val) => val == null ? 'Required' : null,
                           decoration: _inputDecoration("Subject"),
-                          validator:
-                              (val) =>
-                                  val == null || val.isEmpty
-                                      ? 'Required'
-                                      : null,
                           dropdownColor: darkBlue1,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                           ),
                         ),
+                        const SizedBox(height: 10),
+
+                        // Display faculty name below the dropdown
+                        if (_selectedFacultyName != null)
+                          Text(
+                            "Faculty: $_selectedFacultyName",
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+
                         const SizedBox(height: 16),
 
                         DropdownButtonFormField(
@@ -249,7 +221,6 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
                                   .toList(),
                           onChanged:
                               (val) => setState(() => _data['type'] = val),
-                          onSaved: (val) => _data['type'] = val,
                           decoration: _inputDecoration("Type"),
                           dropdownColor: darkBlue1,
                           style: const TextStyle(
@@ -272,13 +243,8 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
                                   .toList(),
                           onChanged:
                               (val) => setState(() => _data['day'] = val),
-                          onSaved: (val) => _data['day'] = val,
+                          validator: (val) => val == null ? 'Required' : null,
                           decoration: _inputDecoration("Day"),
-                          validator:
-                              (val) =>
-                                  val == null || val.isEmpty
-                                      ? 'Required'
-                                      : null,
                           dropdownColor: darkBlue1,
                           style: const TextStyle(
                             color: Colors.white,
@@ -300,13 +266,8 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
                                   .toList(),
                           onChanged:
                               (val) => setState(() => _data['time'] = val),
-                          onSaved: (val) => _data['time'] = val,
+                          validator: (val) => val == null ? 'Required' : null,
                           decoration: _inputDecoration("Time"),
-                          validator:
-                              (val) =>
-                                  val == null || val.isEmpty
-                                      ? 'Required'
-                                      : null,
                           dropdownColor: darkBlue1,
                           style: const TextStyle(
                             color: Colors.white,
@@ -328,13 +289,8 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
                                   .toList(),
                           onChanged:
                               (val) => setState(() => _data['room'] = val),
-                          onSaved: (val) => _data['room'] = val,
+                          validator: (val) => val == null ? 'Required' : null,
                           decoration: _inputDecoration("Room"),
-                          validator:
-                              (val) =>
-                                  val == null || val.isEmpty
-                                      ? 'Required'
-                                      : null,
                           dropdownColor: darkBlue1,
                           style: const TextStyle(
                             color: Colors.white,

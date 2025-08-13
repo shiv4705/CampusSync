@@ -22,6 +22,15 @@ class _ManageTimetableScreenState extends State<ManageTimetableScreen> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
 
+  String? _selectedTime;
+  final List<String> _timeSlots = [
+    '09:00 AM - 10:00 AM',
+    '10:00 AM - 11:00 AM',
+    '11:00 AM - 12:00 PM',
+    '12:00 PM - 01:00 PM',
+    '02:00 PM - 04:00 PM',
+  ];
+
   int _timeToInt(String time) {
     switch (time) {
       case '09:00 AM - 10:00 AM':
@@ -84,13 +93,27 @@ class _ManageTimetableScreenState extends State<ManageTimetableScreen> {
             final doc = sortedDocs[index];
             final data = doc.data() as Map<String, dynamic>;
 
-            final subject = data['subject'] ?? 'Unknown Subject';
-            final faculty = data['faculty'] ?? 'Unknown Faculty';
-            final email = data['email'] ?? '';
+            // ✅ Support both old & new format
+            final subject =
+                data.containsKey('subject')
+                    ? data['subject']
+                    : (data.containsKey('subjectName') &&
+                            data.containsKey('subjectCode')
+                        ? "${data['subjectCode']} - ${data['subjectName']}"
+                        : 'Unknown Subject');
+
+            final faculty =
+                data.containsKey('faculty')
+                    ? data['faculty']
+                    : (data.containsKey('facultyName')
+                        ? data['facultyName']
+                        : 'Unknown Faculty');
             final type = data['type'] ?? 'Lecture';
             final time = data['time'] ?? 'N/A';
             final semester = data['semester'] ?? '-';
             final room = data['room'] ?? '-';
+
+            final validTime = _timeSlots.contains(time) ? time : null;
 
             return Card(
               color: Colors.white.withOpacity(0.08),
@@ -123,13 +146,8 @@ class _ManageTimetableScreenState extends State<ManageTimetableScreen> {
                         "Faculty: $faculty",
                         style: const TextStyle(color: Colors.white70),
                       ),
-                      if (email.isNotEmpty)
-                        Text(
-                          "Email: $email",
-                          style: const TextStyle(color: Colors.white70),
-                        ),
                       Text(
-                        "Type: $type | Time: $time",
+                        "Type: $type | Time: ${validTime ?? 'Invalid'}",
                         style: const TextStyle(color: Colors.white70),
                       ),
                       Text(
@@ -147,8 +165,8 @@ class _ManageTimetableScreenState extends State<ManageTimetableScreen> {
                       MaterialPageRoute(
                         builder:
                             (_) => EditTimetableScreen(
-                              docId: doc.id,
-                              initialData: data,
+                              docId: doc.id, // Pass the document ID
+                              initialData: data, // Pass the timetable data
                             ),
                       ),
                     );
@@ -182,7 +200,7 @@ class _ManageTimetableScreenState extends State<ManageTimetableScreen> {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const AddTimetableScreen()),
+            MaterialPageRoute(builder: (_) => AddTimetableScreen()),
           );
         },
         child: const Icon(Icons.add, color: Colors.white),
@@ -190,7 +208,7 @@ class _ManageTimetableScreenState extends State<ManageTimetableScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ✅ Custom TabBar - aligned from start
+          // ✅ Custom TabBar
           Container(
             color: darkBlue2,
             height: 48,

@@ -19,6 +19,8 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
   final _formKey = GlobalKey<FormState>();
   late Map<String, dynamic> _data;
 
+  final Color primaryColor = const Color(0xFF4CAF50);
+
   final List<String> _days = [
     'Monday',
     'Tuesday',
@@ -27,12 +29,6 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
     'Friday',
   ];
   final List<String> _types = ['Lecture', 'Lab'];
-  final Map<String, String> _subjects = {
-    'MAD101': 'Mobile App Development',
-    'DSA102': 'Data Structures & Algorithms',
-    'DBMS103': 'Database Management Systems',
-    'SGP104': 'Software Group Project',
-  };
   final List<String> _timeSlots = [
     '09:00 AM - 10:00 AM',
     '10:00 AM - 11:00 AM',
@@ -42,54 +38,35 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
   ];
   final List<String> _rooms = ['111', '112'];
 
-  Map<String, String> _facultyEmailMap = {};
-  bool _isLoadingFaculty = true;
-
-  final Color primaryColor = const Color(0xFF9AB6FF);
-  final Color darkBlue1 = const Color(0xFF0A152E);
-  final Color darkBlue2 = const Color(0xFF0D1D50);
-
   @override
   void initState() {
     super.initState();
     _data = Map<String, dynamic>.from(widget.initialData);
-    _fetchFacultyList();
   }
 
-  Future<void> _fetchFacultyList() async {
-    try {
-      final snapshot =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .where('role', isEqualTo: 'faculty')
-              .get();
+  String get subjectDisplay {
+    if (_data.containsKey('subjectName') && _data.containsKey('subjectCode')) {
+      return '${_data['subjectCode']} - ${_data['subjectName']}';
+    } else if (_data.containsKey('subject')) {
+      return _data['subject'];
+    } else {
+      return 'Unknown Subject';
+    }
+  }
 
-      final Map<String, String> facultyMap = {};
-      for (var doc in snapshot.docs) {
-        final name = doc['name'] ?? '';
-        final email = doc['email'] ?? '';
-        if (name.isNotEmpty && email.isNotEmpty) {
-          facultyMap[name] = email;
-        }
-      }
-
-      setState(() {
-        _facultyEmailMap = facultyMap;
-        _isLoadingFaculty = false;
-      });
-    } catch (e) {
-      setState(() => _isLoadingFaculty = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Error loading faculty list.")),
-      );
+  String get facultyDisplay {
+    if (_data.containsKey('facultyName')) {
+      return _data['facultyName'];
+    } else if (_data.containsKey('faculty')) {
+      return _data['faculty'];
+    } else {
+      return 'Unknown Faculty';
     }
   }
 
   Future<void> _update() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      _data['email'] = _facultyEmailMap[_data['faculty']] ?? '';
-      _data['semester'] = '7'; // Always save semester as 7
 
       try {
         await FirebaseFirestore.instance
@@ -134,268 +111,195 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: darkBlue2,
+      backgroundColor: const Color(0xFF0D1D50),
       appBar: AppBar(
         title: const Text("Edit Timetable Entry"),
-        backgroundColor: darkBlue2,
+        backgroundColor: const Color(0xFF0D1D50),
         elevation: 0,
       ),
-      body:
-          _isLoadingFaculty
-              ? const Center(
-                child: CircularProgressIndicator(color: Colors.blueAccent),
-              )
-              : SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 6),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                // Subject (Read-only)
+                TextFormField(
+                  initialValue: subjectDisplay,
+                  decoration: _inputDecoration("Subject"),
+                  readOnly: true,
+                  style: const TextStyle(color: Colors.white),
+                ),
+                const SizedBox(height: 10),
+
+                // Faculty (Read-only)
+                TextFormField(
+                  initialValue: facultyDisplay,
+                  decoration: _inputDecoration("Faculty"),
+                  readOnly: true,
+                  style: const TextStyle(color: Colors.white),
+                ),
+                const SizedBox(height: 16),
+
+                // Type Dropdown
+                DropdownButtonFormField(
+                  isExpanded: true,
+                  value: _data['type'],
+                  items:
+                      _types
+                          .map(
+                            (t) => DropdownMenuItem(value: t, child: Text(t)),
+                          )
+                          .toList(),
+                  onChanged: (val) => setState(() => _data['type'] = val),
+                  onSaved: (val) => _data['type'] = val,
+                  decoration: _inputDecoration("Type"),
+                  validator:
+                      (val) =>
+                          val == null || (val as String).isEmpty
+                              ? 'Type is required'
+                              : null,
+                  dropdownColor: const Color(0xFF0A152E),
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
+                const SizedBox(height: 16),
+
+                // Day Dropdown
+                DropdownButtonFormField(
+                  isExpanded: true,
+                  value: _data['day'],
+                  items:
+                      _days
+                          .map(
+                            (d) => DropdownMenuItem(value: d, child: Text(d)),
+                          )
+                          .toList(),
+                  onChanged: (val) => setState(() => _data['day'] = val),
+                  onSaved: (val) => _data['day'] = val,
+                  decoration: _inputDecoration("Day"),
+                  validator:
+                      (val) =>
+                          val == null || (val as String).isEmpty
+                              ? 'Day is required'
+                              : null,
+                  dropdownColor: const Color(0xFF0A152E),
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
+                const SizedBox(height: 16),
+
+                // Time Dropdown
+                DropdownButtonFormField(
+                  isExpanded: true,
+                  value: _data['time'],
+                  items:
+                      _timeSlots
+                          .map(
+                            (t) => DropdownMenuItem(value: t, child: Text(t)),
+                          )
+                          .toList(),
+                  onChanged: (val) => setState(() => _data['time'] = val),
+                  onSaved: (val) => _data['time'] = val,
+                  decoration: _inputDecoration("Time"),
+                  validator:
+                      (val) =>
+                          val == null || (val as String).isEmpty
+                              ? 'Time is required'
+                              : null,
+                  dropdownColor: const Color(0xFF0A152E),
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
+                const SizedBox(height: 16),
+
+                // Room Dropdown
+                DropdownButtonFormField(
+                  isExpanded: true,
+                  value: _data['room'],
+                  items:
+                      _rooms
+                          .map(
+                            (r) => DropdownMenuItem(value: r, child: Text(r)),
+                          )
+                          .toList(),
+                  onChanged: (val) => setState(() => _data['room'] = val),
+                  onSaved: (val) => _data['room'] = val,
+                  decoration: _inputDecoration("Room"),
+                  validator:
+                      (val) =>
+                          val == null || (val as String).isEmpty
+                              ? 'Room is required'
+                              : null,
+                  dropdownColor: const Color(0xFF0A152E),
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
+                const SizedBox(height: 20),
+
+                // Update Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
-                  ),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        DropdownButtonFormField(
-                          isExpanded: true,
-                          value: _data['faculty'],
-                          items:
-                              _facultyEmailMap.keys
-                                  .map(
-                                    (f) => DropdownMenuItem(
-                                      value: f,
-                                      child: Text(
-                                        f,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged:
-                              (val) => setState(() => _data['faculty'] = val),
-                          onSaved: (val) => _data['faculty'] = val,
-                          decoration: _inputDecoration("Faculty"),
-                          validator:
-                              (val) =>
-                                  val == null || (val as String).isEmpty
-                                      ? 'Faculty is required'
-                                      : null,
-                          dropdownColor: darkBlue1,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        DropdownButtonFormField(
-                          isExpanded: true,
-                          value: _data['subject'],
-                          items:
-                              _subjects.entries
-                                  .map(
-                                    (e) => DropdownMenuItem(
-                                      value: '${e.key} - ${e.value}',
-                                      child: Text(
-                                        '${e.key} - ${e.value}',
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged:
-                              (val) => setState(() => _data['subject'] = val),
-                          onSaved: (val) => _data['subject'] = val,
-                          decoration: _inputDecoration("Subject"),
-                          validator:
-                              (val) =>
-                                  val == null || (val as String).isEmpty
-                                      ? 'Subject is required'
-                                      : null,
-                          dropdownColor: darkBlue1,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        DropdownButtonFormField(
-                          isExpanded: true,
-                          value: _data['type'],
-                          items:
-                              _types
-                                  .map(
-                                    (t) => DropdownMenuItem(
-                                      value: t,
-                                      child: Text(t),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged:
-                              (val) => setState(() => _data['type'] = val),
-                          onSaved: (val) => _data['type'] = val,
-                          decoration: _inputDecoration("Type"),
-                          validator:
-                              (val) =>
-                                  val == null || (val as String).isEmpty
-                                      ? 'Type is required'
-                                      : null,
-                          dropdownColor: darkBlue1,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        DropdownButtonFormField(
-                          isExpanded: true,
-                          value: _data['day'],
-                          items:
-                              _days
-                                  .map(
-                                    (d) => DropdownMenuItem(
-                                      value: d,
-                                      child: Text(d),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged:
-                              (val) => setState(() => _data['day'] = val),
-                          onSaved: (val) => _data['day'] = val,
-                          decoration: _inputDecoration("Day"),
-                          validator:
-                              (val) =>
-                                  val == null || (val as String).isEmpty
-                                      ? 'Day is required'
-                                      : null,
-                          dropdownColor: darkBlue1,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        DropdownButtonFormField(
-                          isExpanded: true,
-                          value: _data['time'],
-                          items:
-                              _timeSlots
-                                  .map(
-                                    (t) => DropdownMenuItem(
-                                      value: t,
-                                      child: Text(t),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged:
-                              (val) => setState(() => _data['time'] = val),
-                          onSaved: (val) => _data['time'] = val,
-                          decoration: _inputDecoration("Time"),
-                          validator:
-                              (val) =>
-                                  val == null || (val as String).isEmpty
-                                      ? 'Time is required'
-                                      : null,
-                          dropdownColor: darkBlue1,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        DropdownButtonFormField(
-                          isExpanded: true,
-                          value: _data['room'],
-                          items:
-                              _rooms
-                                  .map(
-                                    (r) => DropdownMenuItem(
-                                      value: r,
-                                      child: Text(r),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged:
-                              (val) => setState(() => _data['room'] = val),
-                          onSaved: (val) => _data['room'] = val,
-                          decoration: _inputDecoration("Room"),
-                          validator:
-                              (val) =>
-                                  val == null || (val as String).isEmpty
-                                      ? 'Room is required'
-                                      : null,
-                          dropdownColor: darkBlue1,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        SizedBox(
-                          width: double.infinity,
-                          height: 55,
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryColor,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            onPressed: _update,
-                            icon: const Icon(Icons.update, color: Colors.black),
-                            label: const Text(
-                              "Update Entry",
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        SizedBox(
-                          width: double.infinity,
-                          height: 55,
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.redAccent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            onPressed: _delete,
-                            icon: const Icon(Icons.delete, color: Colors.white),
-                            label: const Text(
-                              "Delete Entry",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                    ),
+                    onPressed: _update,
+                    icon: const Icon(Icons.update, color: Colors.black),
+                    label: const Text(
+                      "Update Entry",
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 12),
+
+                // Delete Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: _delete,
+                    icon: const Icon(Icons.delete, color: Colors.white),
+                    label: const Text(
+                      "Delete Entry",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -12,16 +12,54 @@ class FacultyDashboard extends StatefulWidget {
   State<FacultyDashboard> createState() => _FacultyDashboardState();
 }
 
-class _FacultyDashboardState extends State<FacultyDashboard> {
+class _FacultyDashboardState extends State<FacultyDashboard>
+    with SingleTickerProviderStateMixin {
   String facultyName = "";
+
+  late AnimationController _controller;
+  late List<Animation<double>> _fadeAnimations;
+  late List<Animation<Offset>> _slideAnimations;
 
   @override
   void initState() {
     super.initState();
-    _fetchFacultyName();
+    _fetchFacultyDetails();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+
+    int itemCount = 2; // Updated item count
+    _fadeAnimations = List.generate(itemCount, (index) {
+      final start = index * 0.1;
+      final end = start + 0.4;
+      return Tween<double>(begin: 0, end: 1).animate(
+        CurvedAnimation(
+          parent: _controller,
+          curve: Interval(start, end, curve: Curves.easeOut),
+        ),
+      );
+    });
+
+    _slideAnimations = List.generate(itemCount, (index) {
+      final start = index * 0.1;
+      final end = start + 0.4;
+      return Tween<Offset>(
+        begin: const Offset(0, 0.1),
+        end: Offset.zero,
+      ).animate(
+        CurvedAnimation(
+          parent: _controller,
+          curve: Interval(start, end, curve: Curves.easeOut),
+        ),
+      );
+    });
+
+    _controller.forward();
   }
 
-  Future<void> _fetchFacultyName() async {
+  Future<void> _fetchFacultyDetails() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final snapshot =
@@ -44,22 +82,62 @@ class _FacultyDashboardState extends State<FacultyDashboard> {
   }
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     const Color darkBlue1 = Color(0xFF091227);
     const Color darkBlue2 = Color(0xFF0D1D50);
+    const Color primaryColor = Color(0xFF9AB6FF);
+
+    final List<Map<String, dynamic>> dashboardItems = [
+      {
+        "title": "View Timetable",
+        "icon": Icons.calendar_today,
+        "onTap":
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FacultyTimetableScreen()),
+            ),
+      },
+      {
+        "title": "Mark Attendance",
+        "icon": Icons.check_circle_outline,
+        "onTap":
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MarkAttendanceScreen()),
+            ),
+      },
+    ];
 
     return Scaffold(
       backgroundColor: darkBlue2,
       appBar: AppBar(
-        backgroundColor: darkBlue2,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
-          "Faculty Dashboard",
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: ShaderMask(
+          shaderCallback:
+              (bounds) => const LinearGradient(
+                colors: [Color(0xFF9AB6FF), Colors.blueAccent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ).createShader(bounds),
+          child: Text(
+            "Welcome, $facultyName",
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 22,
+              color: Colors.white,
+            ),
+          ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
               Navigator.pushAndRemoveUntil(
@@ -81,100 +159,93 @@ class _FacultyDashboardState extends State<FacultyDashboard> {
         ),
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 10),
-
-              /// ✅ Welcome Message
-              Text(
-                facultyName.isNotEmpty
-                    ? "Welcome, $facultyName"
-                    : "Welcome, Faculty",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+          child: GridView.builder(
+            itemCount: dashboardItems.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 1.05,
+            ),
+            itemBuilder: (context, index) {
+              return FadeTransition(
+                opacity: _fadeAnimations[index],
+                child: SlideTransition(
+                  position: _slideAnimations[index],
+                  child: _buildDashboardCard(
+                    title: dashboardItems[index]["title"],
+                    icon: dashboardItems[index]["icon"],
+                    color: primaryColor,
+                    onTap: dashboardItems[index]["onTap"],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 30),
-
-              /// ✅ Dashboard Cards
-              Expanded(
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  children: [
-                    _buildDashboardCard(
-                      icon: Icons.calendar_today,
-                      label: "View Timetable",
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const FacultyTimetableScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    _buildDashboardCard(
-                      icon: Icons.check_circle_outline,
-                      label: "Mark Attendance",
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const MarkAttendanceScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              );
+            },
           ),
         ),
       ),
     );
   }
 
-  /// ✅ Reusable Dashboard Card Widget
   Widget _buildDashboardCard({
+    required String title,
     required IconData icon,
-    required String label,
+    required Color color,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Card(
-        color: Colors.white.withOpacity(0.08),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.white.withOpacity(0.1)),
-        ),
-        elevation: 4,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 40, color: Colors.blueAccent),
-              const SizedBox(height: 12),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+    return StatefulBuilder(
+      builder: (context, setState) {
+        bool isHovered = false;
+        return MouseRegion(
+          onEnter: (_) => setState(() => isHovered = true),
+          onExit: (_) => setState(() => isHovered = false),
+          child: GestureDetector(
+            onTap: onTap,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.07),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color:
+                      isHovered
+                          ? Colors.blueAccent.withOpacity(0.4)
+                          : Colors.white.withOpacity(0.15),
+                  width: 1.5,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color:
+                        isHovered
+                            ? Colors.blueAccent.withOpacity(0.5)
+                            : Colors.black.withOpacity(0.3),
+                    blurRadius: isHovered ? 16 : 10,
+                    spreadRadius: isHovered ? 2 : 1,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
-            ],
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 42, color: color),
+                  const SizedBox(height: 14),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
