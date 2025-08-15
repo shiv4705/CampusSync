@@ -10,41 +10,42 @@ class SubmitFeedbackScreen extends StatefulWidget {
 }
 
 class _SubmitFeedbackScreenState extends State<SubmitFeedbackScreen> {
-  final _titleController = TextEditingController();
-  final _messageController = TextEditingController();
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _messageController = TextEditingController();
   bool _isLoading = false;
-  String? _status;
+  String? _statusMessage;
 
   Future<void> _submitFeedback() async {
     final title = _titleController.text.trim();
     final message = _messageController.text.trim();
-    final email = FirebaseAuth.instance.currentUser?.email ?? "Unknown";
 
     if (title.isEmpty || message.isEmpty) {
-      setState(() => _status = "Please fill in both fields.");
+      setState(() => _statusMessage = "Please fill in all fields.");
       return;
     }
 
     setState(() {
       _isLoading = true;
-      _status = null;
+      _statusMessage = null;
     });
 
     try {
+      final user = FirebaseAuth.instance.currentUser;
+
       await FirebaseFirestore.instance.collection('feedback').add({
         'title': title,
         'message': message,
-        'email': email,
+        'email': user?.email ?? '',
         'timestamp': Timestamp.now(),
       });
 
       setState(() {
-        _status = "Feedback submitted successfully.";
+        _statusMessage = "Feedback submitted successfully.";
         _titleController.clear();
         _messageController.clear();
       });
     } catch (e) {
-      setState(() => _status = "Error: ${e.toString()}");
+      setState(() => _statusMessage = "Error: ${e.toString()}");
     } finally {
       setState(() => _isLoading = false);
     }
@@ -52,126 +53,88 @@ class _SubmitFeedbackScreenState extends State<SubmitFeedbackScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const Color darkBlue1 = Color(0xFF091227);
-    const Color darkBlue2 = Color(0xFF0D1D50);
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: darkBlue2,
-      appBar: AppBar(
-        title: const Text("Submit Feedback"),
-        backgroundColor: darkBlue2,
-        elevation: 0,
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [darkBlue1, darkBlue2],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      appBar: AppBar(title: const Text("Submit Feedback")),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Card(
+          color: theme.cardColor,
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
+          child: Padding(
             padding: const EdgeInsets.all(20),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white24),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "We value your feedback",
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ✅ Screen title
+                Text(
+                  "We value your feedback",
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "Your feedback helps us improve the learning experience.",
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.white70,
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // ✅ Title field
+                TextField(
+                  controller: _titleController,
+                  style: theme.textTheme.bodyLarge,
+                  decoration: const InputDecoration(
+                    labelText: "Feedback Title",
+                    hintText: "e.g. Bad Teaching in XYZ Subject",
+                  ),
+                ),
+                const SizedBox(height: 15),
+
+                // ✅ Message field
+                TextField(
+                  controller: _messageController,
+                  maxLines: 5,
+                  style: theme.textTheme.bodyLarge,
+                  decoration: const InputDecoration(
+                    labelText: "Message",
+                    hintText: "Describe your feedback here...",
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // ✅ Submit button
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _submitFeedback,
+                        child: const Text("Submit"),
+                      ),
+                    ),
+
+                const SizedBox(height: 16),
+
+                // ✅ Status message
+                if (_statusMessage != null)
+                  Text(
+                    _statusMessage!,
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
+                      color:
+                          _statusMessage!.startsWith("Error")
+                              ? Colors.red
+                              : Colors.green,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 16),
-
-                  /// Title Input
-                  TextField(
-                    controller: _titleController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: "Title",
-                      labelStyle: const TextStyle(color: Colors.white70),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.08),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  /// Message Input
-                  TextField(
-                    controller: _messageController,
-                    maxLines: 5,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: "Message",
-                      labelStyle: const TextStyle(color: Colors.white70),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.08),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  /// Submit Button
-                  _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueAccent,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: _submitFeedback,
-                          icon: const Icon(Icons.send, color: Colors.white),
-                          label: const Text(
-                            "Submit",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                  const SizedBox(height: 16),
-
-                  /// Status Message
-                  if (_status != null)
-                    Center(
-                      child: Text(
-                        _status!,
-                        style: TextStyle(
-                          color:
-                              _status!.contains("successfully")
-                                  ? Colors.greenAccent
-                                  : Colors.redAccent,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                ],
-              ),
+              ],
             ),
           ),
         ),

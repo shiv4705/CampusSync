@@ -2,12 +2,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../admin/view_reset_requests.screen.dart';
+import '../admin/view_reset_requests_screen.dart';
 import '../admin/add_user_screen.dart';
 import '../admin/view_feedback_screen.dart';
 import '../admin/view_all_users_screen.dart';
 import '../admin/timetable/manage_timetable_screen.dart';
-import '../admin/assign_subject_screen.dart'; // ⬅️ NEW import
+import '../admin/assign_subject_screen.dart';
 import '../auth/login_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
