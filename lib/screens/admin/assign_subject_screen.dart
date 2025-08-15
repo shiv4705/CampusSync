@@ -16,6 +16,8 @@ class _AdminAssignSubjectScreenState extends State<AdminAssignSubjectScreen> {
   List<Map<String, dynamic>> faculties = [];
   bool isLoading = true;
 
+  final Color primaryColor = const Color(0xFF4CAF50);
+
   @override
   void initState() {
     super.initState();
@@ -53,11 +55,14 @@ class _AdminAssignSubjectScreenState extends State<AdminAssignSubjectScreen> {
     }
 
     try {
+      String subjectCode = subjectCodeController.text.trim();
+      String subjectName = subjectNameController.text.trim();
+      String formattedSubject = "$subjectCode - $subjectName";
+
       await FirebaseFirestore.instance.collection('subjects').add({
-        'subjectCode': subjectCodeController.text.trim(),
-        'subjectName': subjectNameController.text.trim(),
+        'faculty': selectedFacultyName,
+        'subject': formattedSubject,
         'facultyId': selectedFacultyId,
-        'facultyName': selectedFacultyName,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -76,31 +81,56 @@ class _AdminAssignSubjectScreenState extends State<AdminAssignSubjectScreen> {
     }
   }
 
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Colors.white70, fontSize: 16),
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.08),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Assign Subject to Faculty")),
+      backgroundColor: const Color(0xFF0D1D50),
+      appBar: AppBar(
+        title: const Text("Assign Subject to Faculty"),
+        backgroundColor: const Color(0xFF0D1D50),
+        elevation: 0,
+      ),
       body:
           isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : Padding(
-                padding: const EdgeInsets.all(16),
-                child: SingleChildScrollView(
+              ? const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              )
+              : SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Faculty Dropdown
                       DropdownButtonFormField<String>(
                         value: selectedFacultyId,
-                        decoration: InputDecoration(
-                          labelText: "Select Faculty",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 14,
-                          ),
-                        ),
+                        decoration: _inputDecoration("Select Faculty"),
                         items:
                             faculties
                                 .map(
@@ -113,55 +143,53 @@ class _AdminAssignSubjectScreenState extends State<AdminAssignSubjectScreen> {
                                   ),
                                 )
                                 .toList(),
-                        onChanged: (val) {
-                          setState(() => selectedFacultyId = val);
-                        },
+                        onChanged:
+                            (val) => setState(() => selectedFacultyId = val),
+                        dropdownColor: const Color(0xFF0A152E),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
+
+                      // Subject Code
                       TextField(
                         controller: subjectCodeController,
-                        decoration: InputDecoration(
-                          labelText: "Subject Code",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 14,
-                          ),
-                        ),
+                        decoration: _inputDecoration("Subject Code"),
+                        style: const TextStyle(color: Colors.white),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
+
+                      // Subject Name
                       TextField(
                         controller: subjectNameController,
-                        decoration: InputDecoration(
-                          labelText: "Subject Name",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 14,
-                          ),
-                        ),
+                        decoration: _inputDecoration("Subject Name"),
+                        style: const TextStyle(color: Colors.white),
                       ),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 24),
+
+                      // Assign Button
                       SizedBox(
                         width: double.infinity,
+                        height: 55,
                         child: ElevatedButton.icon(
-                          icon: const Icon(Icons.check, color: Colors.white),
-                          label: const Text(
-                            "Assign Subject",
-                            style: TextStyle(fontSize: 16, color: Colors.white),
-                          ),
                           style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            backgroundColor: Theme.of(context).primaryColor,
+                            backgroundColor: primaryColor,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                           onPressed: assignSubject,
+                          icon: const Icon(Icons.check, color: Colors.black),
+                          label: const Text(
+                            "Assign Subject",
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ],

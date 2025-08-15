@@ -40,11 +40,15 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
 
     for (var doc in snapshot.docs) {
       final data = doc.data();
-      final isPresent = (data['present'] as List).contains(studentEmail);
-      final room = data['room']?.toString();
-      final inferredType = (room == '111') ? 'Lecture' : 'Lab';
+      final isTaken = data['isTaken'] as bool? ?? true;
+      final isPresent =
+          isTaken && (data['present'] as List).contains(studentEmail);
 
-      allDocs.add({...data, 'marked': isPresent, 'type': inferredType});
+      allDocs.add({
+        ...data,
+        'type': (data['room'] == '111') ? 'Lecture' : 'Lab',
+        'status': isTaken ? (isPresent ? 'Present' : 'Absent') : 'Not Taken',
+      });
     }
 
     final Map<String, List<Map<String, dynamic>>> subjectWise = {};
@@ -59,40 +63,36 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
     for (var doc in allDocs) {
       final subject = doc['subject'] ?? 'Unknown';
       final date = doc['date'] ?? 'Unknown';
-      final isPresent = doc['marked'] == true;
+      final status = doc['status'];
       final type = doc['type'];
 
       final subjectKey = "$subject ($type)";
       subjectWise.putIfAbsent(subjectKey, () => []).add(doc);
       dateWise.putIfAbsent(date, () => []).add(doc);
 
-      total++;
-      if (isPresent) present++;
-
-      if (type == 'Lecture') {
-        lectureTotal++;
-        if (isPresent) lecturePresent++;
-      } else {
-        labTotal++;
-        if (isPresent) labPresent++;
+      if (status == 'Present') {
+        total++;
+        present++;
+        if (type == 'Lecture') {
+          lectureTotal++;
+          lecturePresent++;
+        } else {
+          labTotal++;
+          labPresent++;
+        }
+      } else if (status == 'Absent') {
+        total++;
+        if (type == 'Lecture')
+          lectureTotal++;
+        else
+          labTotal++;
       }
+      // Not Taken classes are excluded from percentage calculations
     }
-
-    final sortedSubjectWise = Map.fromEntries(
-      subjectWise.entries.toList()..sort((a, b) {
-        final subjectA = a.key.split(' (')[0];
-        final typeA = a.key.contains('Lab') ? 1 : 0;
-        final subjectB = b.key.split(' (')[0];
-        final typeB = b.key.contains('Lab') ? 1 : 0;
-        return subjectA.compareTo(subjectB) != 0
-            ? subjectA.compareTo(subjectB)
-            : typeA.compareTo(typeB);
-      }),
-    );
 
     setState(() {
       attendanceDocs = allDocs;
-      groupedBySubject = sortedSubjectWise;
+      groupedBySubject = subjectWise;
       groupedByDate = dateWise;
       totalAttendance = total == 0 ? 0 : (present / total) * 100;
       lectureAttendance =
@@ -102,8 +102,16 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
     });
   }
 
-  Color statusColor(bool marked) {
-    return marked ? Colors.greenAccent : Colors.redAccent;
+  Color statusColor(String status) {
+    switch (status) {
+      case 'Present':
+        return Colors.greenAccent;
+      case 'Absent':
+        return Colors.redAccent;
+      case 'Not Taken':
+      default:
+        return Colors.blueGrey;
+    }
   }
 
   @override
@@ -125,7 +133,7 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
               )
               : Column(
                 children: [
-                  // LARGE ATTENDANCE SUMMARY CARD
+                  // Summary Card
                   Container(
                     width: double.infinity,
                     margin: const EdgeInsets.all(16),
@@ -186,22 +194,25 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
                     ],
                   ),
 
+                  // Tab contents
                   Expanded(
                     child: TabBarView(
                       controller: _tabController,
                       children: [
-                        // Subject-wise Tab
+                        // Subject-wise view
                         ListView(
                           padding: const EdgeInsets.all(16),
                           children:
                               groupedBySubject.entries.map((entry) {
+                                final totalCount = entry.value.length;
                                 final presentCount =
                                     entry.value
-                                        .where((e) => e['marked'])
+                                        .where((e) => e['status'] == 'Present')
                                         .length;
-                                final totalCount = entry.value.length;
                                 final percentage =
-                                    (presentCount / totalCount) * 100;
+                                    totalCount == 0
+                                        ? 0
+                                        : (presentCount / totalCount) * 100;
 
                                 return Container(
                                   margin: const EdgeInsets.only(bottom: 12),
@@ -235,7 +246,7 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
                               }).toList(),
                         ),
 
-                        // Day-wise Tab
+                        // Day-wise view with calendar
                         Column(
                           children: [
                             TableCalendar(
@@ -299,10 +310,6 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
                                             'yyyy-MM-dd',
                                           ).format(selectedDate)]
                                           ?.map((e) {
-                                            final inferredType =
-                                                (e['room'] == '111')
-                                                    ? 'Lecture'
-                                                    : 'Lab';
                                             return Container(
                                               margin: const EdgeInsets.only(
                                                 bottom: 12,
@@ -325,18 +332,16 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
                                                   ),
                                                 ),
                                                 subtitle: Text(
-                                                  "$inferredType | Room: ${e['room']}",
+                                                  "${e['type']} | Room: ${e['room']}",
                                                   style: const TextStyle(
                                                     color: Colors.white54,
                                                   ),
                                                 ),
                                                 trailing: Text(
-                                                  e['marked'] == true
-                                                      ? 'Present'
-                                                      : 'Absent',
+                                                  e['status'],
                                                   style: TextStyle(
                                                     color: statusColor(
-                                                      e['marked'] == true,
+                                                      e['status'],
                                                     ),
                                                     fontWeight: FontWeight.bold,
                                                   ),

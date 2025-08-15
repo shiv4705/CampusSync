@@ -31,6 +31,26 @@ class FacultyTimetableScreen extends StatelessWidget {
     return timeSlots.indexOf(normalized);
   }
 
+  String buildSubjectText(Map<String, dynamic> data) {
+    final oldSubject = (data['subject'] ?? '').toString();
+    final code = (data['subjectCode'] ?? '').toString();
+    final name = (data['subjectName'] ?? '').toString();
+
+    if (oldSubject.isNotEmpty) return oldSubject;
+    if (code.isNotEmpty && name.isNotEmpty) return "$code - $name";
+    if (code.isNotEmpty) return code;
+    if (name.isNotEmpty) return name;
+    return "Unknown Subject";
+  }
+
+  String buildFacultyText(Map<String, dynamic> data) {
+    final old = (data['faculty'] ?? '').toString();
+    final newer = (data['facultyName'] ?? '').toString();
+    if (newer.isNotEmpty) return newer;
+    if (old.isNotEmpty) return old;
+    return "Unknown Faculty";
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -39,6 +59,8 @@ class FacultyTimetableScreen extends StatelessWidget {
     }
 
     final facultyEmail = currentUser.email ?? '';
+    final facultyUid = currentUser.uid;
+    final facultyDisplayName = currentUser.displayName ?? '';
 
     const Color darkBlue1 = Color(0xFF091227);
     const Color darkBlue2 = Color(0xFF0D1D50);
@@ -63,10 +85,7 @@ class FacultyTimetableScreen extends StatelessWidget {
         ),
         child: StreamBuilder<QuerySnapshot>(
           stream:
-              FirebaseFirestore.instance
-                  .collection('timetable')
-                  .where('email', isEqualTo: facultyEmail)
-                  .snapshots(),
+              FirebaseFirestore.instance.collection('timetable').snapshots(),
           builder: (context, snapshot) {
             if (snapshot.hasError) {
               return const Center(
@@ -83,7 +102,19 @@ class FacultyTimetableScreen extends StatelessWidget {
               );
             }
 
-            final docs = snapshot.data?.docs ?? [];
+            final allDocs = snapshot.data?.docs ?? [];
+
+            // Include both old (email) and new (facultyId / facultyName) matches
+            final docs =
+                allDocs.where((d) {
+                  final data = (d.data() as Map<String, dynamic>);
+                  final email = (data['email'] ?? '').toString();
+                  final fid = (data['facultyId'] ?? '').toString();
+                  final fname = (data['facultyName'] ?? '').toString();
+                  return email == facultyEmail ||
+                      fid == facultyUid ||
+                      (fname.isNotEmpty && fname == facultyDisplayName);
+                }).toList();
 
             if (docs.isEmpty) {
               return const Center(
@@ -94,7 +125,6 @@ class FacultyTimetableScreen extends StatelessWidget {
               );
             }
 
-            // Sort docs first by day, then by time
             final sortedDocs =
                 docs.toList()..sort((a, b) {
                   final dataA = a.data() as Map<String, dynamic>;
@@ -110,10 +140,10 @@ class FacultyTimetableScreen extends StatelessWidget {
                 });
 
             // Group timetable by day
-            Map<String, List<Map<String, dynamic>>> timetableByDay = {};
+            final Map<String, List<Map<String, dynamic>>> timetableByDay = {};
             for (var doc in sortedDocs) {
               final data = doc.data() as Map<String, dynamic>;
-              final day = data['day'] ?? 'Unknown';
+              final day = (data['day'] ?? 'Unknown').toString();
               timetableByDay.putIfAbsent(day, () => []).add(data);
             }
 
@@ -152,12 +182,14 @@ class FacultyTimetableScreen extends StatelessWidget {
                                   ),
                                 ]
                                 : dayClasses.map((data) {
-                                  final subjectCode =
-                                      data['subject'] ?? 'Unknown';
-                                  final time = data['time'] ?? 'N/A';
-                                  final type = data['type'] ?? 'Lecture';
-                                  final semester = data['semester'] ?? '-';
-                                  final room = data['room'] ?? '-';
+                                  final subjectText = buildSubjectText(data);
+                                  final time =
+                                      (data['time'] ?? 'N/A').toString();
+                                  final type =
+                                      (data['type'] ?? 'Lecture').toString();
+                                  final semester =
+                                      (data['semester'] ?? '-').toString();
+                                  final room = (data['room'] ?? '-').toString();
 
                                   return Card(
                                     color: Colors.white.withOpacity(0.08),
@@ -174,7 +206,7 @@ class FacultyTimetableScreen extends StatelessWidget {
                                     child: ListTile(
                                       contentPadding: const EdgeInsets.all(12),
                                       title: Text(
-                                        subjectCode,
+                                        subjectText,
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.bold,

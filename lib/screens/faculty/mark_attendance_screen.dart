@@ -1,3 +1,4 @@
+// Add all your existing imports at the top
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -11,24 +12,22 @@ class MarkAttendanceScreen extends StatefulWidget {
 }
 
 class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
-  String? selectedKey;
-  String? selectedSubject;
-  String? selectedSemester;
-  String? selectedRoom;
-  String? selectedDate;
-  String? selectedTime;
-
+  String? selectedKey,
+      selectedSubject,
+      selectedSemester,
+      selectedRoom,
+      selectedDate,
+      selectedTime;
   List<Map<String, dynamic>> students = [];
   Set<String> presentEmails = {};
-
   bool isLoading = false;
   List<Map<String, dynamic>> unmarkedClasses = [];
-
   final currentUser = FirebaseAuth.instance.currentUser;
 
-  // Colors
-  final Color darkBlue1 = const Color(0xFF091227);
-  final Color darkBlue2 = const Color(0xFF0D1D50);
+  final DateTime collegeStartDate = DateTime(2025, 8, 11);
+
+  final Color darkBlue1 = const Color(0xFF091227),
+      darkBlue2 = const Color(0xFF0D1D50);
 
   @override
   void initState() {
@@ -36,93 +35,182 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     fetchUnmarkedClasses();
   }
 
-  List<DateTime> getWeekDatesUntilToday() {
-    final now = DateTime.now();
-    final weekday = now.weekday;
-    final monday = now.subtract(Duration(days: weekday - 1));
-    return List.generate(weekday, (i) => monday.add(Duration(days: i)));
+  List<DateTime> getAllDatesFromStart() {
+    final today = DateTime.now();
+    final daysDiff = today.difference(collegeStartDate).inDays;
+    return List.generate(
+      daysDiff + 1,
+      (i) => collegeStartDate.add(Duration(days: i)),
+    );
   }
 
   Future<void> fetchUnmarkedClasses() async {
     setState(() => isLoading = true);
     unmarkedClasses.clear();
 
-    final email = currentUser!.email;
-    final dates = getWeekDatesUntilToday();
-
-    for (var date in dates) {
-      final dayName = DateFormat('EEEE').format(date);
-      final dateString = DateFormat('yyyy-MM-dd').format(date);
-
-      final timetableSnap =
-          await FirebaseFirestore.instance
-              .collection('timetable')
-              .where('email', isEqualTo: email)
-              .where('day', isEqualTo: dayName)
-              .get();
-
-      for (var doc in timetableSnap.docs) {
-        final data = doc.data();
-        final subjectCode = (data['subject'] as String).split(" - ").first;
-        final attendanceId = '${dateString}_$subjectCode';
-        final time = data['time'];
-        final uniqueKey = '$attendanceId|$dateString|$time';
-
-        final attendanceSnap =
-            await FirebaseFirestore.instance
-                .collection('attendance')
-                .doc(attendanceId)
-                .get();
-
-        if (!attendanceSnap.exists) {
-          unmarkedClasses.add({
-            'key': uniqueKey,
-            'subject': data['subject'],
-            'semester': data['semester'],
-            'room': data['room'],
-            'date': dateString,
-            'time': time,
-          });
-        }
-      }
+    if (currentUser?.email == null) {
+      debugPrint('No current user. Email missing.');
+      setState(() => isLoading = false);
+      return;
     }
 
-    setState(() => isLoading = false);
+    final dates = getAllDatesFromStart();
+
+    try {
+      for (final date in dates) {
+        final dayName = DateFormat('EEEE').format(date);
+        final dateString = DateFormat('yyyy-MM-dd').format(date);
+
+        final timetableSnap =
+            await FirebaseFirestore.instance
+                .collection('timetable')
+                .where('facultyId', isEqualTo: currentUser!.uid)
+                .where('day', isEqualTo: dayName)
+                .get();
+
+        for (final doc in timetableSnap.docs) {
+          final data = doc.data();
+          final subject =
+              data['subject']?.toString().trim() ?? 'Unknown Subject';
+          final subjectCode =
+              data['subjectCode']?.toString().trim() ??
+              subject.split(' - ').first;
+          final time = data['time']?.toString().trim() ?? '';
+          final sanitizedTime = time.replaceAll(RegExp(r'\s+|[:-]'), '_');
+          final attendanceId = '${dateString}_${subjectCode}_$sanitizedTime';
+
+          final attendanceSnap =
+              await FirebaseFirestore.instance
+                  .collection('attendance')
+                  .doc(attendanceId)
+                  .get();
+
+          if (!attendanceSnap.exists) {
+            unmarkedClasses.add({
+              'key': attendanceId,
+              'subject': subject,
+              'semester': data['semester']?.toString() ?? '',
+              'room': data['room']?.toString() ?? '',
+              'date': dateString,
+              'time': time,
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching unmarked classes: $e");
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
 
   Future<void> loadStudents(String semester) async {
-    final studentSnapshot =
+    final snap =
         await FirebaseFirestore.instance
             .collection('users')
             .where('role', isEqualTo: 'student')
             .where('semester', isEqualTo: semester)
             .get();
 
-    students =
-        studentSnapshot.docs
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
+    students = snap.docs.map((d) => d.data() as Map<String, dynamic>).toList();
     setState(() {});
   }
 
   Future<void> submitAttendance() async {
-    final parts = selectedKey!.split('|');
-    final docId = parts[0];
+    if (selectedKey == null ||
+        selectedDate == null ||
+        selectedSubject == null ||
+        selectedSemester == null ||
+        selectedRoom == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Missing required fields.")));
+      return;
+    }
 
-    await FirebaseFirestore.instance.collection('attendance').doc(docId).set({
-      'date': selectedDate,
-      'subject': selectedSubject,
-      'facultyEmail': currentUser!.email,
-      'semester': selectedSemester,
-      'room': selectedRoom,
-      'present': presentEmails.toList(),
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+    final docId = selectedKey!;
+    final email = currentUser?.email;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Attendance submitted successfully")),
-    );
+    if (email == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("User not logged in.")));
+      return;
+    }
 
+    try {
+      await FirebaseFirestore.instance.collection('attendance').doc(docId).set({
+        'date': selectedDate,
+        'subject': selectedSubject,
+        'facultyEmail': email,
+        'semester': selectedSemester,
+        'room': selectedRoom,
+        'present': presentEmails.toList(),
+        'isTaken': true,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Attendance submitted successfully")),
+      );
+
+      resetStateAndRefresh();
+    } catch (e) {
+      debugPrint("❌ Firestore write error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to submit attendance: $e")),
+      );
+    }
+  }
+
+  Future<void> markAsNotTaken() async {
+    if (selectedKey == null ||
+        selectedDate == null ||
+        selectedSubject == null ||
+        selectedSemester == null ||
+        selectedRoom == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Missing required fields.")));
+      return;
+    }
+
+    final docId = selectedKey!;
+    final email = currentUser?.email;
+
+    if (email == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("User not logged in.")));
+      return;
+    }
+
+    try {
+      await FirebaseFirestore.instance.collection('attendance').doc(docId).set({
+        'date': selectedDate,
+        'subject': selectedSubject,
+        'facultyEmail': email,
+        'semester': selectedSemester,
+        'room': selectedRoom,
+        'isTaken': false,
+        'reason': 'Class not conducted',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Marked as not taken")));
+
+      resetStateAndRefresh();
+    } catch (e) {
+      debugPrint("Firestore error (not taken): $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to mark as not taken: $e")),
+      );
+    }
+  }
+
+  void resetStateAndRefresh() {
     setState(() {
       selectedKey = null;
       selectedSubject = null;
@@ -134,7 +222,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
       presentEmails.clear();
     });
 
-    await fetchUnmarkedClasses();
+    fetchUnmarkedClasses();
   }
 
   void toggleSelectAll() {
@@ -142,7 +230,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
       if (presentEmails.length == students.length) {
         presentEmails.clear();
       } else {
-        presentEmails = students.map((e) => e['email'] as String).toSet();
+        presentEmails = students.map((s) => s['email'] as String).toSet();
       }
     });
   }
@@ -163,32 +251,30 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
               : unmarkedClasses.isEmpty
               ? const Center(
                 child: Text(
-                  "No attendance remaining for this week",
+                  "No attendance remaining",
                   style: TextStyle(fontSize: 16, color: Colors.white70),
                 ),
               )
-              : Container(
-                color: darkBlue1,
+              : Padding(
                 padding: const EdgeInsets.all(16),
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      /// Dropdown
                       DropdownButtonFormField<String>(
                         dropdownColor: darkBlue1,
                         style: const TextStyle(color: Colors.white),
                         isExpanded: true,
                         value:
-                            (selectedKey != null &&
+                            selectedKey != null &&
                                     unmarkedClasses.any(
                                       (e) => e['key'] == selectedKey,
-                                    ))
+                                    )
                                 ? selectedKey
                                 : null,
                         items:
                             unmarkedClasses.map((data) {
-                              final key = data['key'].toString().trim();
+                              final key = data['key'] as String;
                               final subjectCode =
                                   (data['subject'] as String)
                                       .split(" - ")
@@ -204,22 +290,22 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                               );
                             }).toList(),
                         onChanged: (val) async {
-                          final selected = unmarkedClasses.firstWhere(
+                          final sel = unmarkedClasses.firstWhere(
                             (e) => e['key'] == val,
                           );
-
                           setState(() {
                             selectedKey = val;
-                            selectedSubject = selected['subject'];
-                            selectedSemester = selected['semester'];
-                            selectedRoom = selected['room'];
-                            selectedDate = selected['date'];
-                            selectedTime = selected['time'];
-                            presentEmails.clear();
+                            selectedSubject = sel['subject'] as String;
+                            selectedSemester = sel['semester'] as String;
+                            selectedRoom = sel['room'] as String;
+                            selectedDate = sel['date'] as String;
+                            selectedTime = sel['time'] as String;
                             students.clear();
+                            presentEmails.clear();
                           });
-
-                          await loadStudents(selectedSemester!);
+                          if (selectedSemester!.isNotEmpty) {
+                            await loadStudents(selectedSemester!);
+                          }
                         },
                         decoration: InputDecoration(
                           filled: true,
@@ -228,14 +314,11 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                           labelStyle: const TextStyle(color: Colors.white70),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: Colors.white54),
+                            borderSide: const BorderSide(color: Colors.white54),
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 12),
-
-                      /// Show class details
                       if (selectedKey != null)
                         Card(
                           color: Colors.white.withOpacity(0.08),
@@ -272,8 +355,6 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                             ),
                           ),
                         ),
-
-                      /// Select All Button
                       if (students.isNotEmpty)
                         Align(
                           alignment: Alignment.centerRight,
@@ -293,19 +374,16 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                             ),
                           ),
                         ),
-
-                      /// Students List
                       if (students.isNotEmpty)
                         ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: students.length,
-                          itemBuilder: (_, index) {
-                            final student = students[index];
-                            final email = student['email'];
-                            final name = student['name'];
+                          itemBuilder: (_, i) {
+                            final st = students[i];
+                            final email = st['email'] as String;
+                            final name = st['name'] as String;
                             final isPresent = presentEmails.contains(email);
-
                             return CheckboxListTile(
                               value: isPresent,
                               title: Text(
@@ -316,39 +394,60 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                                 email,
                                 style: const TextStyle(color: Colors.white70),
                               ),
-                              onChanged: (val) {
-                                setState(() {
-                                  if (val == true) {
-                                    presentEmails.add(email);
-                                  } else {
-                                    presentEmails.remove(email);
-                                  }
-                                });
-                              },
+                              onChanged:
+                                  (val) => setState(() {
+                                    if (val == true)
+                                      presentEmails.add(email);
+                                    else
+                                      presentEmails.remove(email);
+                                  }),
                             );
                           },
                         ),
-
-                      const SizedBox(height: 12),
-
-                      /// Submit Button
-                      if (students.isNotEmpty)
-                        Center(
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blueAccent,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 12,
+                      const SizedBox(height: 16),
+                      if (selectedKey != null)
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: submitAttendance,
+                                icon: const Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                ),
+                                label: const Text(
+                                  "Submit Attendance",
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blueAccent,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                ),
                               ),
                             ),
-                            onPressed: submitAttendance,
-                            icon: const Icon(Icons.check, color: Colors.white),
-                            label: const Text(
-                              "Submit Attendance",
-                              style: TextStyle(color: Colors.white),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: markAsNotTaken,
+                                icon: const Icon(
+                                  Icons.cancel,
+                                  color: Colors.white,
+                                ),
+                                label: const Text(
+                                  "Mark as Not Taken",
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.redAccent,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                     ],
                   ),

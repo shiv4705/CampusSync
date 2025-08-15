@@ -11,14 +11,15 @@ class AddTimetableScreen extends StatefulWidget {
 class _AddTimetableScreenState extends State<AddTimetableScreen> {
   final _formKey = GlobalKey<FormState>();
   final Map<String, dynamic> _data = {
-    'facultyName': '',
+    'faculty': '',
     'facultyId': '',
     'subjectCode': '',
-    'subjectName': '',
+    'subject': '',
     'type': 'Lecture',
     'day': '',
     'time': '',
     'room': '',
+    'semester': '', // added semester
   };
 
   final List<String> _days = [
@@ -38,6 +39,8 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
   ];
   final List<String> _rooms = ['111', '112'];
 
+  final List<String> _semesters = ['1', '2', '3', '4', '5', '6', '7', '8'];
+
   bool _isLoadingSubjects = true;
   List<Map<String, dynamic>> _subjects = [];
   String? _selectedFacultyName;
@@ -53,16 +56,55 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
   }
 
   Future<void> _fetchSubjects() async {
+    setState(() => _isLoadingSubjects = true);
     try {
       final snapshot =
           await FirebaseFirestore.instance.collection('subjects').get();
+
       final List<Map<String, dynamic>> subjectsList =
           snapshot.docs.map((doc) {
+            final Map<String, dynamic> raw = doc.data() as Map<String, dynamic>;
+
+            String subjectCode = '';
+            String subjectName = '';
+
+            if ((raw['subjectCode'] != null &&
+                    raw['subjectCode'].toString().trim().isNotEmpty) ||
+                (raw['subjectName'] != null &&
+                    raw['subjectName'].toString().trim().isNotEmpty)) {
+              subjectCode = (raw['subjectCode'] ?? '').toString().trim();
+              subjectName = (raw['subjectName'] ?? '').toString().trim();
+            }
+
+            if ((subjectCode.isEmpty || subjectName.isEmpty) &&
+                raw['subject'] != null) {
+              final s = raw['subject'].toString();
+              final parts = s.split(' - ');
+              if (parts.length >= 2) {
+                subjectCode = parts.first.trim();
+                subjectName = parts.sublist(1).join(' - ').trim();
+              } else {
+                subjectName = s.trim();
+              }
+            }
+
+            String facultyName =
+                (raw['facultyName'] ?? raw['faculty'] ?? '').toString().trim();
+
+            String facultyId =
+                (raw['facultyId'] ??
+                        raw['facultyUid'] ??
+                        raw['faculty_id'] ??
+                        '')
+                    .toString()
+                    .trim();
+
             return {
-              'subjectCode': doc['subjectCode'] ?? '',
-              'subjectName': doc['subjectName'] ?? '',
-              'facultyName': doc['facultyName'] ?? '',
-              'facultyId': doc['facultyId'] ?? '',
+              'id': doc.id,
+              'subjectCode': subjectCode,
+              'subjectName': subjectName,
+              'facultyName': facultyName,
+              'facultyId': facultyId,
             };
           }).toList();
 
@@ -163,26 +205,42 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
                     key: _formKey,
                     child: Column(
                       children: [
-                        DropdownButtonFormField(
+                        DropdownButtonFormField<Map<String, dynamic>>(
                           isExpanded: true,
                           items:
                               _subjects.map((s) {
-                                return DropdownMenuItem(
+                                final display =
+                                    (s['subjectCode'] != null &&
+                                            s['subjectCode']
+                                                .toString()
+                                                .isNotEmpty)
+                                        ? "${s['subjectCode']} - ${s['subjectName']}"
+                                        : s['subjectName'] ?? 'Unknown Subject';
+                                return DropdownMenuItem<Map<String, dynamic>>(
                                   value: s,
                                   child: Text(
-                                    "${s['subjectCode']} - ${s['subjectName']}",
+                                    display,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 );
                               }).toList(),
                           onChanged: (val) {
-                            final selected = val as Map<String, dynamic>;
+                            if (val == null) return;
+                            final selected = val;
                             setState(() {
-                              _data['subjectCode'] = selected['subjectCode'];
-                              _data['subjectName'] = selected['subjectName'];
-                              _data['facultyName'] = selected['facultyName'];
-                              _data['facultyId'] = selected['facultyId'];
-                              _selectedFacultyName = selected['facultyName'];
+                              _data['subjectCode'] =
+                                  selected['subjectCode'] ?? '';
+                              final combined =
+                                  (selected['subjectCode'] != null &&
+                                          (selected['subjectCode'] as String)
+                                              .isNotEmpty)
+                                      ? "${selected['subjectCode']} - ${selected['subjectName']}"
+                                      : (selected['subjectName'] ?? '');
+                              _data['subject'] = combined;
+                              _data['faculty'] = selected['facultyName'] ?? '';
+                              _data['facultyId'] = selected['facultyId'] ?? '';
+                              _selectedFacultyName =
+                                  selected['facultyName'] ?? '';
                             });
                           },
                           validator: (val) => val == null ? 'Required' : null,
@@ -195,8 +253,8 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
                         ),
                         const SizedBox(height: 10),
 
-                        // Display faculty name below the dropdown
-                        if (_selectedFacultyName != null)
+                        if (_selectedFacultyName != null &&
+                            _selectedFacultyName!.isNotEmpty)
                           Text(
                             "Faculty: $_selectedFacultyName",
                             style: const TextStyle(
@@ -207,7 +265,31 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
 
                         const SizedBox(height: 16),
 
-                        DropdownButtonFormField(
+                        DropdownButtonFormField<String>(
+                          isExpanded: true,
+                          items:
+                              _semesters
+                                  .map(
+                                    (sem) => DropdownMenuItem(
+                                      value: sem,
+                                      child: Text("Semester $sem"),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged:
+                              (val) =>
+                                  setState(() => _data['semester'] = val ?? ''),
+                          validator: (val) => val == null ? 'Required' : null,
+                          decoration: _inputDecoration("Semester"),
+                          dropdownColor: darkBlue1,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        DropdownButtonFormField<String>(
                           isExpanded: true,
                           value: _data['type'],
                           items:
@@ -230,7 +312,7 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        DropdownButtonFormField(
+                        DropdownButtonFormField<String>(
                           isExpanded: true,
                           items:
                               _days
@@ -253,7 +335,7 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        DropdownButtonFormField(
+                        DropdownButtonFormField<String>(
                           isExpanded: true,
                           items:
                               _timeSlots
@@ -276,7 +358,7 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        DropdownButtonFormField(
+                        DropdownButtonFormField<String>(
                           isExpanded: true,
                           items:
                               _rooms
