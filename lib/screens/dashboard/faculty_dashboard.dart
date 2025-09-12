@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:campussync/screens/auth/login_screen.dart';
 import 'package:campussync/screens/faculty/faculty_timetable_screen.dart';
 import 'package:campussync/screens/faculty/mark_attendance_screen.dart';
+import 'package:campussync/screens/faculty/faculty_classroom_page.dart'; // ✅ new page
 
 class FacultyDashboard extends StatefulWidget {
   const FacultyDashboard({super.key});
@@ -30,7 +31,7 @@ class _FacultyDashboardState extends State<FacultyDashboard>
       duration: const Duration(milliseconds: 1200),
     );
 
-    int itemCount = 2; // Updated item count
+    int itemCount = 3; // ✅ 3 dashboard items
     _fadeAnimations = List.generate(itemCount, (index) {
       final start = index * 0.1;
       final end = start + 0.4;
@@ -110,6 +111,17 @@ class _FacultyDashboardState extends State<FacultyDashboard>
             () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const MarkAttendanceScreen()),
+            ),
+      },
+      {
+        "title": "Study Materials", // ✅ renamed
+        "icon": Icons.menu_book,
+        "onTap":
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const FacultyClassroomPage(),
+              ), // ✅ updated
             ),
       },
     ];
