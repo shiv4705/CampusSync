@@ -62,7 +62,6 @@ class _SubjectMaterialsPageState extends State<SubjectMaterialsPage>
         _announcements =
             snapshot.docs.map((doc) {
               final data = doc.data() as Map<String, dynamic>;
-              // Convert 'created_at' to DateTime if it's a Timestamp
               if (data['created_at'] is Timestamp) {
                 data['created_at'] = (data['created_at'] as Timestamp).toDate();
               }
@@ -82,7 +81,7 @@ class _SubjectMaterialsPageState extends State<SubjectMaterialsPage>
     if (uri == null) return;
 
     try {
-      if (!await launchUrl(uri, mode: LaunchMode.platformDefault)) {
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text("Cannot open link")));
@@ -102,187 +101,186 @@ class _SubjectMaterialsPageState extends State<SubjectMaterialsPage>
 
   @override
   Widget build(BuildContext context) {
-    const Color primaryColor = Color(0xFF1976D2);
-    const Color cardColor = Color(0xFF1E1E2C);
+    const Color darkBlue1 = Color(0xFF091227);
+    const Color darkBlue2 = Color(0xFF0D1D50);
 
     return Scaffold(
+      backgroundColor: darkBlue2,
       appBar: AppBar(
         title: Text(widget.subjectName),
-        backgroundColor: primaryColor,
+        backgroundColor: darkBlue2,
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
           tabs: const [Tab(text: "Materials"), Tab(text: "Announcements")],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          // ----------------- MATERIALS TAB -----------------
-          _materials.isEmpty
-              ? const Center(child: Text("No materials yet."))
-              : ListView.builder(
-                padding: const EdgeInsets.all(12),
-                itemCount: _materials.length,
-                itemBuilder: (context, index) {
-                  final m = _materials[index];
-                  final dateTime =
-                      m['created_at'] != null
-                          ? DateTime.tryParse(m['created_at'])
-                          : null;
-                  final formattedTime =
-                      dateTime != null
-                          ? DateFormat('dd MMM yyyy, HH:mm').format(dateTime)
-                          : '';
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [darkBlue1, darkBlue2],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            // ----------------- MATERIALS TAB -----------------
+            _materials.isEmpty
+                ? const Center(
+                  child: Text(
+                    "No materials yet.",
+                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                  ),
+                )
+                : ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: _materials.length,
+                  itemBuilder: (context, index) {
+                    final m = _materials[index];
+                    final dateTime =
+                        m['created_at'] != null
+                            ? DateTime.tryParse(m['created_at'])
+                            : null;
+                    final formattedTime =
+                        dateTime != null
+                            ? DateFormat('dd MMM yyyy, HH:mm').format(dateTime)
+                            : '';
 
-                  return Card(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 3,
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    color: cardColor,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (formattedTime.isNotEmpty)
-                            Text(
-                              formattedTime,
-                              style: TextStyle(
-                                color: Colors.grey.shade400,
-                                fontSize: 12,
+                    return Card(
+                      color: Colors.white.withOpacity(0.08),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                      ),
+                      elevation: 4,
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (formattedTime.isNotEmpty)
+                              Text(
+                                formattedTime,
+                                style: TextStyle(
+                                  color: Colors.grey.shade400,
+                                  fontSize: 12,
+                                ),
                               ),
+                            if (formattedTime.isNotEmpty)
+                              const SizedBox(height: 4),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    m['title'] ?? '',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                                if (m['file_url'] != null ||
+                                    m['link_url'] != null)
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.open_in_new,
+                                      color: Colors.white,
+                                    ),
+                                    onPressed:
+                                        () => _openUrl(
+                                          m['file_url'] ?? m['link_url'],
+                                        ),
+                                  ),
+                              ],
                             ),
-                          if (formattedTime.isNotEmpty)
-                            const SizedBox(height: 4),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
+                            if (m['description'] != null &&
+                                m['description'].toString().trim().isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
                                 child: Text(
-                                  m['title'] ?? '',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
+                                  m['description'],
+                                  style: const TextStyle(color: Colors.white70),
                                 ),
                               ),
-                              if (m['file_url'] != null ||
-                                  m['link_url'] != null)
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.open_in_new,
-                                    color: Colors.white,
-                                  ),
-                                  onPressed:
-                                      () => _openUrl(
-                                        m['file_url'] ?? m['link_url'],
-                                      ),
-                                ),
-                            ],
-                          ),
-                          if (m['description'] != null &&
-                              m['description'].toString().trim().isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 6),
-                              child: Text(
-                                m['description'],
-                                style: const TextStyle(color: Colors.white70),
-                              ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
-              ),
+                    );
+                  },
+                ),
 
-          // ----------------- ANNOUNCEMENTS TAB -----------------
-          _announcements.isEmpty
-              ? const Center(child: Text("No announcements yet."))
-              : ListView.builder(
-                padding: const EdgeInsets.all(12),
-                itemCount: _announcements.length,
-                itemBuilder: (context, index) {
-                  final a = _announcements[index];
-                  final dateTime = a['created_at'] as DateTime?;
-                  final formattedTime =
-                      dateTime != null
-                          ? DateFormat('dd MMM yyyy, HH:mm').format(dateTime)
-                          : '';
+            // ----------------- ANNOUNCEMENTS TAB -----------------
+            _announcements.isEmpty
+                ? const Center(
+                  child: Text(
+                    "No announcements yet.",
+                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                  ),
+                )
+                : ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: _announcements.length,
+                  itemBuilder: (context, index) {
+                    final a = _announcements[index];
+                    final dateTime = a['created_at'] as DateTime?;
+                    final formattedTime =
+                        dateTime != null
+                            ? DateFormat('dd MMM yyyy, HH:mm').format(dateTime)
+                            : '';
 
-                  return Card(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 3,
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    color: const Color(0xFF1E1E2C),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (formattedTime.isNotEmpty)
+                    return Card(
+                      color: Colors.white.withOpacity(0.08),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                      ),
+                      elevation: 4,
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (formattedTime.isNotEmpty)
+                              Text(
+                                formattedTime,
+                                style: TextStyle(
+                                  color: Colors.grey.shade400,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            if (formattedTime.isNotEmpty)
+                              const SizedBox(height: 4),
                             Text(
-                              formattedTime,
-                              style: TextStyle(
-                                color: Colors.grey.shade400,
-                                fontSize: 12,
+                              a['title'] ?? '',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
                               ),
                             ),
-                          if (formattedTime.isNotEmpty)
-                            const SizedBox(height: 4),
-                          Text(
-                            a['title'] ?? '',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          if (a['description'] != null &&
-                              a['description'].toString().trim().isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 6),
-                              child: Text(
-                                a['description'],
-                                style: const TextStyle(color: Colors.white70),
+                            if (a['description'] != null &&
+                                a['description'].toString().trim().isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                  a['description'],
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
-              ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: primaryColor,
-        onPressed: () async {
-          if (_tabController.index == 0) {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => UploadMaterialPage(subjectId: widget.subjectId),
-              ),
-            );
-            _loadMaterials();
-          } else {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder:
-                    (_) => UploadAnnouncementPage(subjectId: widget.subjectId),
-              ),
-            );
-            _loadAnnouncements();
-          }
-        },
-        child: const Icon(Icons.add),
+                    );
+                  },
+                ),
+          ],
+        ),
       ),
     );
   }
