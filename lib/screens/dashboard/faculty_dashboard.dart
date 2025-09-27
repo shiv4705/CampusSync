@@ -4,7 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:campussync/screens/auth/login_screen.dart';
 import 'package:campussync/screens/faculty/faculty_timetable_screen.dart';
 import 'package:campussync/screens/faculty/mark_attendance_screen.dart';
-import 'package:campussync/screens/faculty/faculty_classroom_page.dart'; // ✅ new page
+import 'package:campussync/screens/faculty/faculty_classroom_page.dart';
+import 'package:campussync/screens/faculty/faculty_subject_list_screen.dart';
+import 'package:campussync/screens/faculty/faculty_view_submissions_screen.dart';
 
 class FacultyDashboard extends StatefulWidget {
   const FacultyDashboard({super.key});
@@ -31,7 +33,7 @@ class _FacultyDashboardState extends State<FacultyDashboard>
       duration: const Duration(milliseconds: 1200),
     );
 
-    int itemCount = 3; // ✅ 3 dashboard items
+    int itemCount = 4;
     _fadeAnimations = List.generate(itemCount, (index) {
       final start = index * 0.1;
       final end = start + 0.4;
@@ -72,7 +74,10 @@ class _FacultyDashboardState extends State<FacultyDashboard>
 
       if (snapshot.docs.isNotEmpty) {
         setState(() {
-          facultyName = snapshot.docs.first['name'] ?? "Faculty";
+          facultyName =
+              snapshot.docs.first.data().containsKey('name')
+                  ? snapshot.docs.first['name']
+                  : "Faculty";
         });
       } else {
         setState(() {
@@ -114,15 +119,79 @@ class _FacultyDashboardState extends State<FacultyDashboard>
             ),
       },
       {
-        "title": "Study Materials", // ✅ renamed
+        "title": "Study Materials",
         "icon": Icons.menu_book,
         "onTap":
             () => Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (_) => const FacultyClassroomPage(),
-              ), // ✅ updated
+              MaterialPageRoute(builder: (_) => const FacultyClassroomPage()),
             ),
+      },
+      {
+        "title": "Assignments",
+        "icon": Icons.assignment,
+        "onTap": () {
+          showModalBottomSheet(
+            context: context,
+            backgroundColor: Colors.transparent,
+            builder: (_) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: darkBlue1.withOpacity(0.98),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                ),
+                child: SafeArea(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        leading: const Icon(
+                          Icons.upload_file,
+                          color: Colors.lightBlueAccent,
+                        ),
+                        title: const Text(
+                          "Upload Assignment",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const FacultySubjectListScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(
+                          Icons.visibility,
+                          color: Colors.lightBlueAccent,
+                        ),
+                        title: const Text(
+                          "View Submissions",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => const FacultyViewSubmissionsScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
       },
     ];
 
@@ -216,13 +285,13 @@ class _FacultyDashboardState extends State<FacultyDashboard>
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.07),
+                color: Colors.white.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color:
                       isHovered
-                          ? Colors.blueAccent.withOpacity(0.4)
-                          : Colors.white.withOpacity(0.15),
+                          ? Colors.blueAccent.withOpacity(0.5)
+                          : Colors.white.withOpacity(0.2),
                   width: 1.5,
                 ),
                 boxShadow: [

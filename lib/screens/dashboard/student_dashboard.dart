@@ -6,7 +6,8 @@ import '../auth/login_screen.dart';
 import '../student/submit_feedback_screen.dart';
 import '../student/student_timetable_screen.dart';
 import '../student/student_attendance_screen.dart';
-import '../student/student_study_material_page.dart'; // ✅ new import
+import '../student/student_study_material_page.dart';
+import '../student/student_assignment_screen.dart'; // ✅ new import
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -172,6 +173,20 @@ class _StudentDashboardState extends State<StudentDashboard> {
                         );
                       },
                     ),
+                    _buildDashboardCard(
+                      icon: Icons.assignment,
+                      label: "Assignments",
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (_) => const StudentAssignmentSubjectsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
                   ],
                 ),
               ),
