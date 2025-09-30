@@ -7,6 +7,7 @@ import 'package:campussync/screens/faculty/mark_attendance_screen.dart';
 import 'package:campussync/screens/faculty/faculty_classroom_page.dart';
 import 'package:campussync/screens/faculty/faculty_subject_list_screen.dart';
 import 'package:campussync/screens/faculty/faculty_view_submissions_screen.dart';
+import 'package:campussync/screens/event_calendar_screen.dart'; // ⬅️ Import Event Calendar
 
 class FacultyDashboard extends StatefulWidget {
   const FacultyDashboard({super.key});
@@ -33,7 +34,8 @@ class _FacultyDashboardState extends State<FacultyDashboard>
       duration: const Duration(milliseconds: 1200),
     );
 
-    int itemCount = 4;
+    int itemCount = 5; // ⬅️ Increased item count (added Event Calendar)
+
     _fadeAnimations = List.generate(itemCount, (index) {
       final start = index * 0.1;
       final end = start + 0.4;
@@ -192,6 +194,15 @@ class _FacultyDashboardState extends State<FacultyDashboard>
             },
           );
         },
+      },
+      {
+        "title": "Event Calendar", // ⬅️ New card
+        "icon": Icons.event_note,
+        "onTap":
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const EventCalendarScreen()),
+            ),
       },
     ];
 

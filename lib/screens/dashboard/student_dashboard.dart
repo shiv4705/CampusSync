@@ -7,7 +7,8 @@ import '../student/submit_feedback_screen.dart';
 import '../student/student_timetable_screen.dart';
 import '../student/student_attendance_screen.dart';
 import '../student/student_study_material_page.dart';
-import '../student/student_assignment_screen.dart'; // ✅ new import
+import '../student/student_assignment_screen.dart';
+import '../event_calendar_screen.dart'; // ✅ Added import
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -186,7 +187,18 @@ class _StudentDashboardState extends State<StudentDashboard> {
                         );
                       },
                     ),
-
+                    _buildDashboardCard(
+                      icon: Icons.event_note, // ✅ Event Calendar Icon
+                      label: "Event Calendar",
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const EventCalendarScreen(),
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),

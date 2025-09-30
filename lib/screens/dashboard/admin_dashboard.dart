@@ -9,6 +9,7 @@ import '../admin/view_all_users_screen.dart';
 import '../admin/timetable/manage_timetable_screen.dart';
 import '../admin/assign_subject_screen.dart';
 import '../auth/login_screen.dart';
+import '../event_calendar_screen.dart'; // ⬅️ Event calendar import
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -31,8 +32,8 @@ class _AdminDashboardState extends State<AdminDashboard>
       duration: const Duration(milliseconds: 1200),
     );
 
-    // Updated item count
-    int itemCount = 6;
+    // ✅ Increased item count to 7 (added Event Calendar)
+    int itemCount = 7;
 
     _fadeAnimations = List.generate(itemCount, (index) {
       final start = index * 0.1;
@@ -101,9 +102,14 @@ class _AdminDashboardState extends State<AdminDashboard>
         "page": const ManageTimetableScreen(),
       },
       {
-        "title": "Assign Subject", // ⬅️ New menu
+        "title": "Assign Subject",
         "icon": Icons.book_outlined,
-        "page": AdminAssignSubjectScreen(), // ⬅️ from earlier code
+        "page": AdminAssignSubjectScreen(),
+      },
+      {
+        "title": "Event Calendar", // ⬅️ New menu
+        "icon": Icons.event_note,
+        "page": const EventCalendarScreen(), // ⬅️ Opens your event calendar
       },
     ];
 
