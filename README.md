@@ -109,7 +109,6 @@ An interactive calendar for institutional events and activities:
    git clone https://github.com/yourusername/CampusSync.git
    cd CampusSync
 
-
 2. **Install dependencies**
     ```bash
     flutter pub get
