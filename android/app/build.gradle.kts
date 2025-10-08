@@ -21,15 +21,28 @@ android {
 
     defaultConfig {
         applicationId = "com.example.campussync"
-        minSdk = 23 // IMPORTANT: Firebase requires at least 21
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 23 // Firebase requires at least 21
+        targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+        }
     }
 
     buildTypes {
-        release {
+        getByName("release") {
             signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a")
+            isUniversalApk = true
         }
     }
 }
