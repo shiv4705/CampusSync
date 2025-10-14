@@ -1,38 +1,42 @@
-// faculty_subject_list_screen.dart
-import 'package:flutter/material.dart';
+// lib/modules/assignments/screens/faculty/faculty_subject_list_screen.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+
 import 'faculty_assignment_upload_screen.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'faculty_view_submissions_screen.dart';
 import '../../widgets/assignment_card.dart';
 
-/// Mode enum for this page
 enum AssignmentMode { upload, viewSubmissions }
 
 class FacultySubjectListScreen extends StatelessWidget {
   final AssignmentMode mode;
-
   const FacultySubjectListScreen({super.key, required this.mode});
 
-  Future<List<String>> _getAssignedSubjects() async {
-    final facultyEmail = FirebaseAuth.instance.currentUser?.email ?? '';
+  /// Fetch subjects documents assigned to current faculty
+  Future<List<Map<String, dynamic>>> _fetchSubjectsForFaculty() async {
+    final facultyId = FirebaseAuth.instance.currentUser?.uid;
+    if (facultyId == null || facultyId.isEmpty) return [];
 
-    final supabase = Supabase.instance.client; // Ensure Supabase is initialized in your app's main function
-    final res = await supabase
-        .from('assignments')
-        .select('subject_name')
-        .eq('faculty_email', facultyEmail);
+    final snap =
+        await FirebaseFirestore.instance
+            .collection('subjects')
+            .where('facultyId', isEqualTo: facultyId)
+            .get();
 
-    if (res == null) return [];
+    return snap.docs
+        .map((d) => {'id': d.id, ...d.data() as Map<String, dynamic>})
+        .toList();
+  }
 
-    final data = res as List<dynamic>? ?? [];
-    final subjects =
-        data
-            .map((r) => (r as Map<String, dynamic>)['subject_name'] as String)
-            .toSet()
-            .toList();
-
-    return subjects;
+  /// Extract leading subject code from "DSA102 - Data Structures & Algorithms"
+  String _extractSubjectCode(String subjectString) {
+    // try split by ' - ' first, then fallback to first token
+    final parts = subjectString.split(RegExp(r'\s*-\s*'));
+    final left = parts.isNotEmpty ? parts[0] : subjectString;
+    // extract alnum prefix (e.g. DSA102)
+    final match = RegExp(r'^[A-Za-z0-9]+').firstMatch(left.trim());
+    return match?.group(0) ?? left.trim();
   }
 
   @override
@@ -43,8 +47,8 @@ class FacultySubjectListScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(isUpload ? 'Upload Assignment' : 'View Submissions'),
       ),
-      body: FutureBuilder<List<String>>(
-        future: _getAssignedSubjects(),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _fetchSubjectsForFaculty(),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -59,33 +63,46 @@ class FacultySubjectListScreen extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             itemCount: subjects.length,
             itemBuilder: (context, index) {
-              final subject = subjects[index];
+              final sub = subjects[index];
+              final subjStr =
+                  (sub['subject'] ?? sub['subjectName'] ?? '').toString();
+              final subjectDisplay =
+                  subjStr.isNotEmpty ? subjStr : 'Unknown Subject';
+              final subjectCode = _extractSubjectCode(subjectDisplay);
+
               return AssignmentCard(
-                title: subject,
+                title: subjectDisplay,
                 subtitle:
                     isUpload
                         ? 'Tap to upload assignment'
                         : 'Tap to view submissions',
                 onTap: () {
                   if (isUpload) {
+                    // faculty_assignment_upload_screen.dart expects (subjectId, subjectName)
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder:
                             (_) => FacultyAssignmentUploadScreen(
-                              subjectId:
-                                  '', // keep empty; handled in upload screen
-                              subjectName: subject,
+                              subjectId: subjectCode,
+                              subjectName: subjectDisplay,
                             ),
                       ),
                     );
                   } else {
+                    // faculty_view_submissions_screen.dart in your repo doesn't take a subjectName param
+                    // It itself lists subjects and then opens SubjectAssignmentsScreen.
+                    // Use the existing screen (no named parameter) to avoid the "named parameter not defined" error.
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => const FacultyViewSubmissionsScreen(),
                       ),
                     );
+                    // If you want to directly open the subject's submissions screen here,
+                    // and you have access to SubjectAssignmentsScreen in your imports,
+                    // replace the above with:
+                    // Navigator.push(context, MaterialPageRoute(builder: (_) => SubjectAssignmentsScreen(subject: subjectDisplay)));
                   }
                 },
               );

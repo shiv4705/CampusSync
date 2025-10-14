@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/timetable_service.dart';
 
 class AddTimetableScreen extends StatefulWidget {
@@ -14,12 +15,13 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
 
   String day = 'Monday';
   String time = '09:00 AM - 10:00 AM';
-  String subjectCode = '';
-  String subjectName = '';
-  String faculty = '';
-  String room = '';
   String type = 'Lecture';
   String semester = '7';
+  String? selectedSubject;
+  String? subjectCode;
+  String? facultyName;
+  String? facultyId;
+  String room = '';
 
   final List<String> weekdays = [
     'Monday',
@@ -28,6 +30,7 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
     'Thursday',
     'Friday',
   ];
+
   final List<String> timeslots = [
     '09:00 AM - 10:00 AM',
     '10:00 AM - 11:00 AM',
@@ -35,7 +38,81 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
     '12:00 PM - 01:00 PM',
     '02:00 PM - 04:00 PM',
   ];
+
   final List<String> types = ['Lecture', 'Practical'];
+
+  List<Map<String, dynamic>> subjects = [];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchSubjects();
+  }
+
+  Future<void> fetchSubjects() async {
+    final snapshot =
+        await FirebaseFirestore.instance.collection('subjects').get();
+    setState(() {
+      subjects =
+          snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
+    });
+  }
+
+  Future<void> handleAddTimetable() async {
+    if (!_formKey.currentState!.validate()) return;
+    _formKey.currentState!.save();
+
+    if (selectedSubject == null || facultyName == null || facultyId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid subject or faculty data')),
+      );
+      return;
+    }
+
+    // ✅ 1. Check if room is already taken
+    final roomTaken = await _timetableService.isSlotTaken(day, time, room);
+    if (roomTaken) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This room slot is already taken!')),
+      );
+      return;
+    }
+
+    // ✅ 2. Check if faculty already has class at this time
+    final facultyBusy = await _timetableService.isFacultyBusy(
+      day,
+      time,
+      facultyName!,
+    );
+    if (facultyBusy) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Faculty already has a class at this time!'),
+        ),
+      );
+      return;
+    }
+
+    // ✅ 3. Add timetable document in correct format
+    await _timetableService.addTimetable({
+      'day': day,
+      'time': time,
+      'subject': selectedSubject,
+      'subjectCode': subjectCode,
+      'faculty': facultyName,
+      'facultyId': facultyId,
+      'room': room,
+      'type': type,
+      'semester': semester,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Timetable added successfully!')),
+    );
+
+    Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +130,7 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
           key: _formKey,
           child: ListView(
             children: [
-              DropdownButtonFormField(
+              DropdownButtonFormField<String>(
                 value: day,
                 decoration: const InputDecoration(
                   labelText: "Day",
@@ -62,12 +139,17 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
                 ),
                 items:
                     weekdays
-                        .map((d) => DropdownMenuItem(value: d, child: Text(d)))
+                        .map(
+                          (d) => DropdownMenuItem<String>(
+                            value: d,
+                            child: Text(d),
+                          ),
+                        )
                         .toList(),
                 onChanged: (val) => setState(() => day = val!),
               ),
               const SizedBox(height: 10),
-              DropdownButtonFormField(
+              DropdownButtonFormField<String>(
                 value: time,
                 decoration: const InputDecoration(
                   labelText: "Time",
@@ -76,39 +158,57 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
                 ),
                 items:
                     timeslots
-                        .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                        .map(
+                          (t) => DropdownMenuItem<String>(
+                            value: t,
+                            child: Text(t),
+                          ),
+                        )
                         .toList(),
                 onChanged: (val) => setState(() => time = val!),
               ),
               const SizedBox(height: 10),
-              TextFormField(
+              DropdownButtonFormField<String>(
+                value: selectedSubject,
                 decoration: const InputDecoration(
-                  labelText: "Subject Code",
+                  labelText: "Subject",
                   filled: true,
                   fillColor: Colors.white10,
                 ),
-                validator: (v) => v == null || v.isEmpty ? "Required" : null,
-                onSaved: (v) => subjectCode = v!,
+                items:
+                    subjects.map((s) {
+                      return DropdownMenuItem<String>(
+                        value: s['subject'],
+                        child: Text(s['subject']),
+                      );
+                    }).toList(),
+                onChanged: (val) {
+                  setState(() {
+                    selectedSubject = val!;
+                    // Derive subject code from subject string (before " - ")
+                    subjectCode = val.split(' - ').first.trim();
+
+                    // Get faculty name and ID from subject document
+                    final subject = subjects.firstWhere(
+                      (s) => s['subject'] == val,
+                    );
+                    facultyName = subject['faculty'];
+                    facultyId = subject['facultyId'];
+                  });
+                },
+                validator: (v) => v == null ? "Required" : null,
               ),
               const SizedBox(height: 10),
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: "Subject Name",
-                  filled: true,
-                  fillColor: Colors.white10,
+              if (subjectCode != null)
+                Text(
+                  "Subject Code: $subjectCode",
+                  style: const TextStyle(color: Colors.white70),
                 ),
-                onSaved: (v) => subjectName = v ?? '',
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: "Faculty",
-                  filled: true,
-                  fillColor: Colors.white10,
+              if (facultyName != null)
+                Text(
+                  "Faculty: $facultyName",
+                  style: const TextStyle(color: Colors.white70),
                 ),
-                validator: (v) => v == null || v.isEmpty ? "Required" : null,
-                onSaved: (v) => faculty = v!,
-              ),
               const SizedBox(height: 10),
               TextFormField(
                 decoration: const InputDecoration(
@@ -116,10 +216,11 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
                   filled: true,
                   fillColor: Colors.white10,
                 ),
+                validator: (v) => v == null || v.isEmpty ? "Required" : null,
                 onSaved: (v) => room = v ?? '',
               ),
               const SizedBox(height: 10),
-              DropdownButtonFormField(
+              DropdownButtonFormField<String>(
                 value: type,
                 decoration: const InputDecoration(
                   labelText: "Type",
@@ -128,31 +229,18 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
                 ),
                 items:
                     types
-                        .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                        .map(
+                          (t) => DropdownMenuItem<String>(
+                            value: t,
+                            child: Text(t),
+                          ),
+                        )
                         .toList(),
                 onChanged: (val) => setState(() => type = val!),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _formKey.currentState!.save();
-                    _timetableService
-                        .addTimetable({
-                          'day': day,
-                          'time': time,
-                          'subjectCode': subjectCode,
-                          'subjectName': subjectName,
-                          'facultyName': faculty,
-                          'room': room,
-                          'type': type,
-                          'semester': semester,
-                        })
-                        .then((_) {
-                          Navigator.pop(context);
-                        });
-                  }
-                },
+                onPressed: handleAddTimetable,
                 child: const Text("Add Timetable"),
               ),
             ],

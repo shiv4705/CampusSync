@@ -28,6 +28,9 @@ class _StudentAssignmentDetailScreenState
   final supabase = Supabase.instance.client;
   final user = FirebaseAuth.instance.currentUser;
   bool _isUploading = false;
+  Uint8List? _pickedFileBytes;
+  String? _pickedFileName;
+  String? _uploadedFileUrl;
 
   Future<Map<String, dynamic>?> _fetchSubmission() async {
     if (user == null) return null;
@@ -41,44 +44,46 @@ class _StudentAssignmentDetailScreenState
     return res;
   }
 
-  Future<void> _uploadSubmission() async {
-    if (user == null) {
-      ScaffoldMessenger.of(
+  Future<void> _pickFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+      withData: true,
+    );
+    if (result == null) return;
+    setState(() {
+      _pickedFileBytes = result.files.single.bytes;
+      _pickedFileName = result.files.single.name; // original file name
+    });
+  }
+
+  void _previewPickedFile() {
+    if (_pickedFileBytes != null) {
+      final tempFile = File("${Directory.systemTemp.path}/$_pickedFileName");
+      tempFile.writeAsBytesSync(_pickedFileBytes!);
+      Navigator.push(
         context,
-      ).showSnackBar(const SnackBar(content: Text("Please login first.")));
-      return;
+        MaterialPageRoute(
+          builder: (_) => PdfViewerPage(fileUrl: tempFile.path),
+        ),
+      );
+    } else if (_uploadedFileUrl != null) {
+      _openFile(_uploadedFileUrl!);
     }
+  }
+
+  Future<void> _submitFile() async {
+    if (_pickedFileBytes == null) return;
+    setState(() => _isUploading = true);
 
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf'],
-        withData: true,
-      );
-      if (result == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("No file selected.")));
-        return;
-      }
-
-      setState(() => _isUploading = true);
-
-      Uint8List? fileBytes = result.files.single.bytes;
-      if (fileBytes == null && result.files.single.path != null) {
-        fileBytes = await File(result.files.single.path!).readAsBytes();
-      }
-
-      final fileName =
-          "${user!.uid}_${DateTime.now().millisecondsSinceEpoch}.pdf";
-
       await supabase.storage
           .from('student_submissions')
-          .uploadBinary(fileName, fileBytes!);
+          .uploadBinary(_pickedFileName!, _pickedFileBytes!);
 
       final fileUrl = supabase.storage
           .from('student_submissions')
-          .getPublicUrl(fileName);
+          .getPublicUrl(_pickedFileName!);
 
       await supabase.from('student_assignments').insert({
         'assignment_id': widget.assignment['id'],
@@ -89,11 +94,16 @@ class _StudentAssignmentDetailScreenState
         'submitted_at': DateTime.now().toIso8601String(),
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Submission uploaded!")));
-      setState(() => _isUploading = false);
-      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Submission uploaded successfully!")),
+      );
+
+      setState(() {
+        _uploadedFileUrl = fileUrl;
+        _pickedFileBytes = null;
+        _pickedFileName = null;
+        _isUploading = false;
+      });
     } catch (e) {
       setState(() => _isUploading = false);
       ScaffoldMessenger.of(
@@ -146,82 +156,147 @@ class _StudentAssignmentDetailScreenState
             }
             final submission = snap.data;
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  a['title'] ?? '',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  a['description'] ?? '',
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Due: ${_formatDate(a['due_date'])}",
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 8),
-                if (a['file_url'] != null)
-                  TextButton.icon(
-                    onPressed: () => _openFile(a['file_url']),
-                    icon: const Icon(Icons.open_in_new, color: Colors.blue),
-                    label: const Text(
-                      "Open Assignment File",
-                      style: TextStyle(color: Colors.blue),
+            return SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Card(
+                    color: const Color(0xFF162447),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 6,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            a['title'] ?? '',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            a['description'] ?? '',
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            "Due Date: ${_formatDate(a['due_date'])}",
+                            style: const TextStyle(color: Colors.orangeAccent),
+                          ),
+                          const SizedBox(height: 10),
+                          if (a['file_url'] != null)
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blueAccent,
+                              ),
+                              onPressed: () => _openFile(a['file_url']),
+                              icon: const Icon(Icons.open_in_new),
+                              label: const Text("Open Assignment File"),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
-                const Divider(color: Colors.white30),
-                Expanded(
-                  child:
-                      submission != null
-                          ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "You have submitted this assignment.",
-                                style: TextStyle(color: Colors.white),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                "Submitted at: ${_formatDate(submission['submitted_at'])}",
-                                style: const TextStyle(color: Colors.white70),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                "Marks: ${submission['marks'] ?? '-'}/10",
-                                style: const TextStyle(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          )
-                          : widget.isMissed
-                          ? const Center(
-                            child: Text(
-                              "You missed this assignment.",
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          )
-                          : Center(
-                            child:
-                                _isUploading
-                                    ? const CircularProgressIndicator()
-                                    : ElevatedButton.icon(
-                                      onPressed: _uploadSubmission,
-                                      icon: const Icon(Icons.upload_file),
-                                      label: const Text("Upload Submission"),
-                                    ),
+                  const SizedBox(height: 20),
+                  submission != null
+                      ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "You have submitted this assignment.",
+                            style: TextStyle(color: Colors.white),
                           ),
-                ),
-              ],
+                          const SizedBox(height: 8),
+                          Text(
+                            "Submitted at: ${_formatDate(submission['submitted_at'])}",
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Marks: ${submission['marks'] ?? '-'}/10",
+                            style: const TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ElevatedButton.icon(
+                            onPressed: () => _openFile(submission['file_url']),
+                            icon: const Icon(Icons.picture_as_pdf),
+                            label: const Text("View Submitted File"),
+                          ),
+                        ],
+                      )
+                      : widget.isMissed
+                      ? const Center(
+                        child: Text(
+                          "You missed this assignment.",
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      )
+                      : Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_pickedFileBytes != null)
+                              Column(
+                                children: [
+                                  Text(
+                                    "Selected File: $_pickedFileName",
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ElevatedButton.icon(
+                                        onPressed: () {
+                                          setState(() {
+                                            _pickedFileBytes = null;
+                                            _pickedFileName = null;
+                                          });
+                                        },
+                                        icon: const Icon(Icons.cancel),
+                                        label: const Text("Cancel"),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      ElevatedButton.icon(
+                                        onPressed:
+                                            _isUploading ? null : _submitFile,
+                                        icon: const Icon(Icons.check),
+                                        label: const Text("Turned In"),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              )
+                            else
+                              ElevatedButton.icon(
+                                onPressed: _pickFile,
+                                icon: const Icon(Icons.upload_file),
+                                label: const Text("Pick PDF"),
+                              ),
+                            if (_isUploading)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 12),
+                                child: CircularProgressIndicator(),
+                              ),
+                          ],
+                        ),
+                      ),
+                ],
+              ),
             );
           },
         ),

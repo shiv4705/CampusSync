@@ -116,7 +116,7 @@ class StudentAssignmentsScreen extends StatelessWidget {
           return ListView(
             children: [
               section("Ongoing Assignments", ongoing),
-              section("Missed Assignments", missed, isMissed: true),
+              section("Completed Assignments", missed, isMissed: true),
             ],
           );
         },

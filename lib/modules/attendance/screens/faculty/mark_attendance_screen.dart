@@ -45,6 +45,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     );
   }
 
+  /// Optimized fetchUnmarkedClasses
   Future<void> fetchUnmarkedClasses() async {
     setState(() => isLoading = true);
     unmarkedClasses.clear();
@@ -58,46 +59,62 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     final dates = getAllDatesFromStart();
 
     try {
-      for (final date in dates) {
-        final dayName = DateFormat('EEEE').format(date);
-        final dateString = DateFormat('yyyy-MM-dd').format(date);
+      // Fetch all timetable docs for all days in parallel
+      final futures =
+          dates.map((date) async {
+            final dayName = DateFormat('EEEE').format(date);
+            final dateString = DateFormat('yyyy-MM-dd').format(date);
 
-        final timetableSnap =
-            await FirebaseFirestore.instance
-                .collection('timetable')
-                .where('facultyId', isEqualTo: currentUser!.uid)
-                .where('day', isEqualTo: dayName)
-                .get();
+            final timetableSnap =
+                await FirebaseFirestore.instance
+                    .collection('timetable')
+                    .where('facultyId', isEqualTo: currentUser!.uid)
+                    .where('day', isEqualTo: dayName)
+                    .get();
 
-        for (final doc in timetableSnap.docs) {
-          final data = doc.data();
-          final subject =
-              data['subject']?.toString().trim() ?? 'Unknown Subject';
-          final subjectCode =
-              data['subjectCode']?.toString().trim() ??
-              subject.split(' - ').first;
-          final time = data['time']?.toString().trim() ?? '';
-          final sanitizedTime = time.replaceAll(RegExp(r'\s+|[:-]'), '_');
-          final attendanceId = '${dateString}_${subjectCode}_$sanitizedTime';
+            // Return list of unmarked classes for this date
+            return Future.wait(
+              timetableSnap.docs.map((doc) async {
+                final data = doc.data();
+                final subject =
+                    data['subject']?.toString().trim() ?? 'Unknown Subject';
+                final subjectCode =
+                    data['subjectCode']?.toString().trim() ??
+                    subject.split(' - ').first;
+                final time = data['time']?.toString().trim() ?? '';
+                final sanitizedTime = time.replaceAll(RegExp(r'\s+|[:-]'), '_');
+                final attendanceId =
+                    '${dateString}_${subjectCode}_$sanitizedTime';
 
-          final attendanceSnap =
-              await FirebaseFirestore.instance
-                  .collection('attendance')
-                  .doc(attendanceId)
-                  .get();
+                final attendanceSnap =
+                    await FirebaseFirestore.instance
+                        .collection('attendance')
+                        .doc(attendanceId)
+                        .get();
 
-          if (!attendanceSnap.exists) {
-            unmarkedClasses.add({
-              'key': attendanceId,
-              'subject': subject,
-              'semester': data['semester']?.toString() ?? '',
-              'room': data['room']?.toString() ?? '',
-              'date': dateString,
-              'time': time,
-            });
-          }
-        }
-      }
+                if (!attendanceSnap.exists) {
+                  return {
+                    'key': attendanceId,
+                    'subject': subject,
+                    'semester': data['semester']?.toString() ?? '',
+                    'room': data['room']?.toString() ?? '',
+                    'date': dateString,
+                    'time': time,
+                  };
+                }
+                return null;
+              }).toList(),
+            );
+          }).toList();
+
+      // Wait for all futures and flatten results
+      final results = await Future.wait(futures);
+      unmarkedClasses =
+          results
+              .expand((list) => list)
+              .where((e) => e != null)
+              .cast<Map<String, dynamic>>()
+              .toList();
     } catch (e) {
       debugPrint("Error fetching unmarked classes: $e");
     } finally {

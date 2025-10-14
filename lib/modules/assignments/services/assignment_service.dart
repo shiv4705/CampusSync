@@ -1,4 +1,3 @@
-// assignment_service.dart
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -15,6 +14,7 @@ class AssignmentService {
         .select()
         .eq('faculty_email', facultyEmail)
         .order('created_at', ascending: false);
+
     return (res as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
@@ -27,6 +27,7 @@ class AssignmentService {
         .select()
         .eq('subject_name', subjectName)
         .order('created_at', ascending: false);
+
     return (res as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
@@ -37,12 +38,13 @@ class AssignmentService {
   ) async {
     try {
       final bytes = await file.readAsBytes();
-      final fileName = destinationPath; // full path (can include folders)
-      // Supabase storage expects bytes for uploadBinary or file via multipart; here use uploadBinary
-      await _supabase.storage.from('assignments').uploadBinary(fileName, bytes);
+      await _supabase.storage
+          .from('assignments')
+          .uploadBinary(destinationPath, bytes);
+
       final publicUrl = _supabase.storage
           .from('assignments')
-          .getPublicUrl(fileName);
+          .getPublicUrl(destinationPath);
       return publicUrl;
     } catch (e) {
       print('AssignmentService.uploadAssignmentFile error: $e');
@@ -77,12 +79,13 @@ class AssignmentService {
   }
 
   /// Fetch submissions for an assignment ID
-  Future<List<Map<String, dynamic>>> getSubmissions(int assignmentId) async {
+  Future<List<Map<String, dynamic>>> getSubmissions(String assignmentId) async {
     final res = await _supabase
         .from('student_assignments')
         .select()
         .eq('assignment_id', assignmentId)
         .order('submitted_at', ascending: false);
+
     return (res as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
@@ -111,7 +114,7 @@ class AssignmentService {
   }
 
   /// Save marks for a submission row (by id)
-  Future<void> saveMarks(int submissionId, int marks) async {
+  Future<void> saveMarks(String submissionId, int marks) async {
     await _supabase
         .from('student_assignments')
         .update({'marks': marks})
