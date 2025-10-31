@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../services/assignment_service.dart';
-import '../../widgets/submission_card.dart';
 
 class SubmissionPopupDialog extends StatefulWidget {
   final Map<String, dynamic> assignment;
@@ -19,108 +16,145 @@ class _SubmissionPopupDialogState extends State<SubmissionPopupDialog> {
   @override
   void initState() {
     super.initState();
-    final id = widget.assignment['id'] ?? widget.assignment['assignment_id'];
-    _future = _service.getSubmissions(id.toString());
-  }
 
-  String _formatDate(dynamic val) {
-    if (val == null) return '-';
-    if (val is String) {
-      final dt = DateTime.tryParse(val);
-      if (dt != null) return DateFormat('dd MMM yyyy, HH:mm').format(dt);
-    }
-    return val.toString();
-  }
+    final rawId =
+        widget.assignment['id'] ??
+        widget.assignment['assignment_id'] ??
+        widget.assignment['_id'] ??
+        widget.assignment['uid'] ??
+        widget.assignment['assignmentId'];
 
-  /// ✅ Extract roll number correctly from email
-  String _extractRollNo(String email) {
-    try {
-      final localPart = email.split('@').first; // before '@'
-      final lastSegment = localPart.split('.').last; // after last '.'
-      return lastSegment.toUpperCase(); // e.g. 25IT001
-    } catch (_) {
-      return 'Unknown';
-    }
-  }
+    final assignmentId = rawId?.toString();
 
-  /// ✅ Open Supabase file links properly
-  Future<void> _openFile(String url) async {
-    try {
-      final uri = Uri.parse(url);
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Could not open file')));
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error opening file: $e')));
+    if (assignmentId == null) {
+      _future = Future.value([]);
+    } else {
+      _future = _service.getSubmissions(assignmentId);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: const Color(0xFF0E1B3E),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      backgroundColor: const Color(0xFF162447),
       title: Text(
-        widget.assignment['title'] ?? 'Assignment',
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
+        widget.assignment['title'] ?? "Submissions",
+        style: const TextStyle(color: Colors.white),
       ),
-      content: SizedBox(
-        width: double.maxFinite,
-        height: 400,
-        child: FutureBuilder<List<Map<String, dynamic>>>(
-          future: _future,
-          builder: (context, snap) {
-            if (snap.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+      content: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _future,
+        builder: (context, snap) {
+          if (!snap.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            final subs = snap.data ?? [];
-            if (subs.isEmpty) {
-              return const Center(
-                child: Text(
-                  'No student submissions yet',
-                  style: TextStyle(color: Colors.white70),
-                ),
-              );
-            }
+          final submissions = snap.data!;
 
-            return ListView.builder(
-              itemCount: subs.length,
-              itemBuilder: (context, index) {
-                final s = subs[index];
-                final rollNo = _extractRollNo(s['student_email'] ?? '');
-                return SubmissionCard(
-                  studentName: rollNo,
-                  email: s['student_email'] ?? '',
-                  submittedAt: _formatDate(s['submitted_at']),
-                  fileUrl: s['file_url'],
-                  marks: s['marks'],
-                  onOpenFile:
-                      s['file_url'] != null
-                          ? () => _openFile(s['file_url'])
-                          : null,
+          if (submissions.isEmpty) {
+            return const Text(
+              "No submissions yet",
+              style: TextStyle(color: Colors.white),
+            );
+          }
+
+          return SizedBox(
+            width: 400,
+            height: 400,
+            child: ListView.builder(
+              itemCount: submissions.length,
+              itemBuilder: (_, i) {
+                final s = submissions[i];
+
+                return ListTile(
+                  title: Text(
+                    s['student_email'] ?? 'Unknown',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  subtitle: Text(
+                    "Marks: ${s['marks'] ?? '-'}",
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.picture_as_pdf,
+                          color: Colors.redAccent,
+                        ),
+                        tooltip: 'Open submitted file',
+                        onPressed: () {
+                          final fileUrl = s['file_url']?.toString();
+                          if (fileUrl == null || fileUrl.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('No submitted file URL found'),
+                              ),
+                            );
+                            return;
+                          }
+                          _service.openFile(fileUrl);
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.orange),
+                        tooltip: 'Enter marks',
+                        onPressed: () async {
+                          final marks = await _service.enterMarksDialog(
+                            context,
+                          );
+                          if (marks != null) {
+                            final rawAssignId =
+                                s['assignment_id'] ??
+                                s['assignmentId'] ??
+                                s['_id'] ??
+                                s['uid'];
+
+                            final assignmentId = rawAssignId?.toString();
+
+                            if (assignmentId == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Assignment id missing — cannot save marks',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            await _service.saveMarks(
+                              assignmentId,
+                              s['student_id']?.toString() ?? '',
+                              marks,
+                            );
+
+                            setState(() {
+                              _future = _service.getSubmissions(assignmentId);
+                            });
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  onTap: () {
+                    final fileUrl = s['file_url']?.toString();
+                    if (fileUrl != null && fileUrl.isNotEmpty) {
+                      _service.openFile(fileUrl);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('No submitted file to open'),
+                        ),
+                      );
+                    }
+                  },
                 );
               },
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text(
-            'Close',
-            style: TextStyle(color: Colors.blueAccent),
-          ),
-        ),
-      ],
     );
   }
 }

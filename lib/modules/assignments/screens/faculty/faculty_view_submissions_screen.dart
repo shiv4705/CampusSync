@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'submission_popup_dialog.dart'; // <-- import your existing popup
+import 'assignment_detail_screen.dart';
 
 class FacultyViewSubmissionsScreen extends StatelessWidget {
   const FacultyViewSubmissionsScreen({super.key});
@@ -11,18 +11,22 @@ class FacultyViewSubmissionsScreen extends StatelessWidget {
     final supabase = Supabase.instance.client;
 
     final res = await supabase
-        .from('subjects')
-        .select('subject')
-        .eq('facultyId', FirebaseAuth.instance.currentUser?.uid ?? '');
+        .from('assignments')
+        .select('subject_name')
+        .eq('faculty_email', email);
 
     final data = res as List<dynamic>? ?? [];
-    return data.map((e) => e['subject'] as String).toSet().toList();
+    return data.map((e) => e['subject_name'] as String).toSet().toList();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('View Submissions')),
+      backgroundColor: const Color(0xFF0D1D50),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF091227),
+        title: const Text('View Submissions'),
+      ),
       body: FutureBuilder<List<String>>(
         future: _getFacultySubjects(),
         builder: (context, snap) {
@@ -51,19 +55,16 @@ class FacultyViewSubmissionsScreen extends StatelessWidget {
                     style: const TextStyle(color: Colors.white),
                   ),
                   subtitle: const Text(
-                    'Tap to view student submissions',
+                    'Tap to view assignments & submissions',
                     style: TextStyle(color: Colors.white70),
                   ),
                   onTap: () {
-                    showDialog(
-                      context: context,
-                      builder:
-                          (_) => SubmissionPopupDialog(
-                            assignment: {
-                              'title': subject,
-                              'id': subject.hashCode, // unique placeholder id
-                            },
-                          ),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (_) => AssignmentDetailScreen(subject: subject),
+                      ),
                     );
                   },
                 ),

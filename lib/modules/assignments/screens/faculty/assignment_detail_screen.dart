@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import '../../services/assignment_service.dart';
-import '../../widgets/submission_card.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'submission_popup_dialog.dart';
 
 class AssignmentDetailScreen extends StatefulWidget {
@@ -13,56 +11,61 @@ class AssignmentDetailScreen extends StatefulWidget {
 }
 
 class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
-  final _service = AssignmentService();
+  Future<List<Map<String, dynamic>>> _getAssignments() async {
+    final supabase = Supabase.instance.client;
 
-  Future<List<Map<String, dynamic>>> _fetchAssignments() async {
-    return await _service.getAssignmentsBySubject(widget.subject);
+    final res = await supabase
+        .from('assignments')
+        .select()
+        .eq('subject_name', widget.subject)
+        .order('created_at', ascending: false);
+
+    return (res as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.subject)),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _fetchAssignments(),
+      backgroundColor: const Color(0xFF0D1D50),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF091227),
+        title: Text("${widget.subject} - Assignments"),
+      ),
+      body: FutureBuilder(
+        future: _getAssignments(),
         builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
+          if (!snap.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final data = snap.data ?? [];
-          if (data.isEmpty) {
-            return const Center(child: Text("No assignments found"));
+          final assignments = snap.data!;
+          if (assignments.isEmpty) {
+            return const Center(
+              child: Text(
+                "No assignments for this subject",
+                style: TextStyle(color: Colors.white),
+              ),
+            );
           }
 
           return ListView.builder(
-            itemCount: data.length,
-            itemBuilder: (context, i) {
-              final a = data[i];
-              final due =
-                  a['due_date'] != null
-                      ? DateFormat(
-                        'dd MMM yyyy',
-                      ).format(DateTime.parse(a['due_date']))
-                      : '-';
+            padding: const EdgeInsets.all(12),
+            itemCount: assignments.length,
+            itemBuilder: (_, i) {
+              final a = assignments[i];
               return Card(
-                color: Colors.white.withOpacity(0.06),
-                margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                color: const Color(0xFF162447),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: ListTile(
                   title: Text(
-                    a['title'] ?? 'Untitled',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                    a['title'] ?? "",
+                    style: const TextStyle(color: Colors.white),
                   ),
                   subtitle: Text(
-                    "Due: $due",
+                    "Due: ${a['due_date'] ?? 'N/A'}",
                     style: const TextStyle(color: Colors.white70),
-                  ),
-                  trailing: const Icon(
-                    Icons.arrow_forward_ios,
-                    color: Colors.white70,
                   ),
                   onTap: () {
                     showDialog(

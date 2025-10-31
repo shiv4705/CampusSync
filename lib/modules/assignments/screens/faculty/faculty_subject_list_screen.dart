@@ -4,8 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'faculty_assignment_upload_screen.dart';
-import 'faculty_view_submissions_screen.dart';
 import '../../widgets/assignment_card.dart';
+import 'assignment_detail_screen.dart';
 
 enum AssignmentMode { upload, viewSubmissions }
 
@@ -13,7 +13,6 @@ class FacultySubjectListScreen extends StatelessWidget {
   final AssignmentMode mode;
   const FacultySubjectListScreen({super.key, required this.mode});
 
-  /// Fetch subjects documents assigned to current faculty
   Future<List<Map<String, dynamic>>> _fetchSubjectsForFaculty() async {
     final facultyId = FirebaseAuth.instance.currentUser?.uid;
     if (facultyId == null || facultyId.isEmpty) return [];
@@ -29,12 +28,9 @@ class FacultySubjectListScreen extends StatelessWidget {
         .toList();
   }
 
-  /// Extract leading subject code from "DSA102 - Data Structures & Algorithms"
   String _extractSubjectCode(String subjectString) {
-    // try split by ' - ' first, then fallback to first token
     final parts = subjectString.split(RegExp(r'\s*-\s*'));
     final left = parts.isNotEmpty ? parts[0] : subjectString;
-    // extract alnum prefix (e.g. DSA102)
     final match = RegExp(r'^[A-Za-z0-9]+').firstMatch(left.trim());
     return match?.group(0) ?? left.trim();
   }
@@ -78,7 +74,6 @@ class FacultySubjectListScreen extends StatelessWidget {
                         : 'Tap to view submissions',
                 onTap: () {
                   if (isUpload) {
-                    // faculty_assignment_upload_screen.dart expects (subjectId, subjectName)
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -90,19 +85,15 @@ class FacultySubjectListScreen extends StatelessWidget {
                       ),
                     );
                   } else {
-                    // faculty_view_submissions_screen.dart in your repo doesn't take a subjectName param
-                    // It itself lists subjects and then opens SubjectAssignmentsScreen.
-                    // Use the existing screen (no named parameter) to avoid the "named parameter not defined" error.
+                    // ✅ Directly go to assignments for this subject
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const FacultyViewSubmissionsScreen(),
+                        builder:
+                            (_) =>
+                                AssignmentDetailScreen(subject: subjectDisplay),
                       ),
                     );
-                    // If you want to directly open the subject's submissions screen here,
-                    // and you have access to SubjectAssignmentsScreen in your imports,
-                    // replace the above with:
-                    // Navigator.push(context, MaterialPageRoute(builder: (_) => SubjectAssignmentsScreen(subject: subjectDisplay)));
                   }
                 },
               );

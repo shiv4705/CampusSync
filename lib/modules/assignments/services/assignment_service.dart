@@ -1,11 +1,12 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AssignmentService {
   final _supabase = Supabase.instance.client;
 
-  /// Fetch assignments uploaded by a faculty (by faculty email)
   Future<List<Map<String, dynamic>>> getAssignmentsByFaculty(
     String facultyEmail,
   ) async {
@@ -18,7 +19,6 @@ class AssignmentService {
     return (res as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
-  /// Fetch assignments for a subject
   Future<List<Map<String, dynamic>>> getAssignmentsBySubject(
     String subjectName,
   ) async {
@@ -31,7 +31,6 @@ class AssignmentService {
     return (res as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
-  /// Upload file using a File object (returns public URL or null)
   Future<String?> uploadAssignmentFile(
     File file,
     String destinationPath,
@@ -41,18 +40,15 @@ class AssignmentService {
       await _supabase.storage
           .from('assignments')
           .uploadBinary(destinationPath, bytes);
-
-      final publicUrl = _supabase.storage
+      return _supabase.storage
           .from('assignments')
           .getPublicUrl(destinationPath);
-      return publicUrl;
     } catch (e) {
       print('AssignmentService.uploadAssignmentFile error: $e');
       return null;
     }
   }
 
-  /// Insert assignment metadata row
   Future<Map<String, dynamic>?> createAssignment({
     required String subjectId,
     required String subjectName,
@@ -78,8 +74,11 @@ class AssignmentService {
     return Map<String, dynamic>.from(res[0]);
   }
 
-  /// Fetch submissions for an assignment ID
-  Future<List<Map<String, dynamic>>> getSubmissions(String assignmentId) async {
+  Future<List<Map<String, dynamic>>> getSubmissions(
+    String? assignmentId,
+  ) async {
+    if (assignmentId == null) return [];
+
     final res = await _supabase
         .from('student_assignments')
         .select()
@@ -89,7 +88,6 @@ class AssignmentService {
     return (res as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
-  /// Upload student submission bytes
   Future<String?> uploadStudentSubmission(
     Uint8List bytes,
     String destPath,
@@ -98,26 +96,103 @@ class AssignmentService {
       await _supabase.storage
           .from('student_submissions')
           .uploadBinary(destPath, bytes);
-      final publicUrl = _supabase.storage
+      return _supabase.storage
           .from('student_submissions')
           .getPublicUrl(destPath);
-      return publicUrl;
     } catch (e) {
       print('uploadStudentSubmission error: $e');
       return null;
     }
   }
 
-  /// Save submission record
   Future<void> createSubmission(Map<String, dynamic> data) async {
     await _supabase.from('student_assignments').insert(data);
   }
 
-  /// Save marks for a submission row (by id)
-  Future<void> saveMarks(String submissionId, int marks) async {
+  /// ✅ Save marks (original)
+  Future<void> saveMarks(
+    String assignmentId,
+    String studentId,
+    int marks,
+  ) async {
     await _supabase
         .from('student_assignments')
         .update({'marks': marks})
-        .eq('id', submissionId);
+        .eq('assignment_id', assignmentId)
+        .eq('student_id', studentId);
+  }
+
+  /// ✅ Added: updateMarks() for UI compatibility
+  Future<void> updateMarks(String assignmentId, String studentId, int marks) {
+    return saveMarks(assignmentId, studentId, marks);
+  }
+
+  /// ✅ Open Supabase PDF / file safely
+  Future<void> openFile(String? url) async {
+    if (url == null || url.isEmpty || url == "No file") {
+      debugPrint("⚠️ No file URL found");
+      return;
+    }
+
+    String finalUrl = url;
+
+    // If not a full URL → convert storage path to public URL
+    if (!url.startsWith("http")) {
+      finalUrl = _supabase.storage
+          .from('student_submissions')
+          .getPublicUrl(url);
+    }
+
+    final uri = Uri.tryParse(finalUrl);
+    if (uri == null) {
+      debugPrint("❌ Invalid URL: $finalUrl");
+      return;
+    }
+
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      debugPrint("Could not open: $finalUrl");
+    }
+  }
+
+  Future<int?> enterMarksDialog(BuildContext context) async {
+    final marksController = TextEditingController();
+    String? error;
+
+    return showDialog<int?>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text("Enter Marks (1-10)"),
+              content: TextField(
+                controller: marksController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(hintText: "7", errorText: error),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, null),
+                  child: const Text("Cancel"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final val = int.tryParse(marksController.text.trim());
+
+                    if (val == null || val < 1 || val > 10) {
+                      setState(() => error = "Enter number 1-10");
+                      return;
+                    }
+
+                    Navigator.pop(context, val);
+                  },
+                  child: const Text("Save"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 }
