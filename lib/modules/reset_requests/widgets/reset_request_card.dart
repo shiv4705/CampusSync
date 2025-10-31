@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
+/// Card widget that renders a password reset request with a staggered animation.
 class ResetRequestCard extends StatefulWidget {
   final QueryDocumentSnapshot doc;
   final int index;
@@ -32,12 +33,13 @@ class _ResetRequestCardState extends State<ResetRequestCard>
     );
     _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeIn);
 
-    // Staggered animation
+    // Staggered entry animation based on the item's index.
     Future.delayed(Duration(milliseconds: 100 * widget.index), () {
       if (mounted) _animController.forward();
     });
   }
 
+  /// Format Firestore Timestamp to a friendly string.
   String _formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return "Unknown time";
     return DateFormat('dd MMM yyyy, hh:mm a').format(timestamp.toDate());

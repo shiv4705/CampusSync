@@ -6,6 +6,8 @@ import '../../widgets/unmarked_class_dropdown.dart';
 import '../../widgets/student_checkbox_list.dart';
 import '../../widgets/attendance_action_buttons.dart';
 
+/// Screen used by faculty to mark attendance for unmarked timetable entries.
+/// Shows a dropdown of unmarked classes, student list and action buttons.
 class MarkAttendanceScreen extends StatefulWidget {
   const MarkAttendanceScreen({super.key});
 
@@ -36,6 +38,8 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     fetchUnmarkedClasses();
   }
 
+  /// Returns a list of all dates from the configured college start date
+  /// up to today (used to look for unmarked timetable entries).
   List<DateTime> getAllDatesFromStart() {
     final today = DateTime.now();
     final daysDiff = today.difference(collegeStartDate).inDays;
@@ -45,7 +49,8 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     );
   }
 
-  /// Optimized fetchUnmarkedClasses
+  /// Fetch timetable entries for the faculty across dates and
+  /// compute which classes have not yet been marked in `attendance`.
   Future<void> fetchUnmarkedClasses() async {
     setState(() => isLoading = true);
     unmarkedClasses.clear();
@@ -122,6 +127,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     }
   }
 
+  /// Load students for the provided semester to render the attendance list.
   Future<void> loadStudents(String semester) async {
     final snap =
         await FirebaseFirestore.instance
@@ -130,10 +136,13 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
             .where('semester', isEqualTo: semester)
             .get();
 
-    students = snap.docs.map((d) => d.data() as Map<String, dynamic>).toList();
+    students =
+        snap.docs.map((d) => d.data()).cast<Map<String, dynamic>>().toList();
     setState(() {});
   }
 
+  /// Submit the marked attendance for the selected class into Firestore.
+  /// Writes `present`, `isTaken=true` and metadata to the `attendance` doc.
   Future<void> submitAttendance() async {
     if (selectedKey == null ||
         selectedDate == null ||
@@ -179,6 +188,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     }
   }
 
+  /// Mark a class as not taken (writes `isTaken=false` with a reason).
   Future<void> markAsNotTaken() async {
     if (selectedKey == null ||
         selectedDate == null ||
@@ -224,6 +234,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     }
   }
 
+  /// Reset selection state and refresh the list of unmarked classes.
   void resetStateAndRefresh() {
     setState(() {
       selectedKey = null;
@@ -238,6 +249,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     fetchUnmarkedClasses();
   }
 
+  /// Toggle selecting all students as present/clear present set.
   void toggleSelectAll() {
     setState(() {
       if (presentEmails.length == students.length) {

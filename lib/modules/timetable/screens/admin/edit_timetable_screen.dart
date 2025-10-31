@@ -3,6 +3,8 @@ import '../../services/timetable_service.dart';
 
 class EditTimetableScreen extends StatefulWidget {
   final Map<String, dynamic> data;
+
+  /// Edit an existing timetable entry; fields are prefilled from `data`.
   const EditTimetableScreen({super.key, required this.data});
 
   @override
@@ -171,6 +173,7 @@ class _EditTimetableScreenState extends State<EditTimetableScreen> {
 
               ElevatedButton(
                 onPressed: () {
+                  // Validate and push update to the timetable service.
                   if (_formKey.currentState!.validate()) {
                     _formKey.currentState!.save();
                     _timetableService

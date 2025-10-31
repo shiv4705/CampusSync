@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+/// Dropdown that lists unmarked classes for selection by the faculty.
+/// The `value` is validated against available keys to avoid stale selections.
 class UnmarkedClassDropdown extends StatelessWidget {
   final String? selectedKey;
   final List<Map<String, dynamic>> unmarkedClasses;

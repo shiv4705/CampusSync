@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/feedback_service.dart';
 
+/// Simple screen where a student can submit feedback; shows local status messages.
 class SubmitFeedbackScreen extends StatefulWidget {
   const SubmitFeedbackScreen({super.key});
 
@@ -15,6 +16,7 @@ class _SubmitFeedbackScreenState extends State<SubmitFeedbackScreen> {
   bool _isLoading = false;
   String? _statusMessage;
 
+  /// Validate fields and call service to persist feedback to Firestore.
   Future<void> _submitFeedback() async {
     final title = _titleController.text.trim();
     final message = _messageController.text.trim();

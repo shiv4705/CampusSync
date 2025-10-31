@@ -2,12 +2,14 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/widgets.dart';
 
+/// App SDK initializer. Call `AppInitializer.initialize()` before `runApp()`.
 class AppInitializer {
+  /// Initialize Firebase and Supabase (minimal, one-line comment).
   static Future<void> initialize() async {
-    
     WidgetsFlutterBinding.ensureInitialized();
     await Firebase.initializeApp();
 
+    // Initialize Supabase client (keep keys out of source in production).
     await Supabase.initialize(
       url: 'https://nyjhscoadbhbhepddxjx.supabase.co',
       anonKey:

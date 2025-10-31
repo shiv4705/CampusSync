@@ -2,11 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class UserService {
+  /// Manages user creation and lookup in Firestore and Firebase Auth.
   final CollectionReference _usersRef = FirebaseFirestore.instance.collection(
     'users',
   );
 
-  /// Create a new user with email and password
+  /// Create a new Firebase Auth user and store a users document. Returns detected role.
   Future<String> createUser({
     required String name,
     required String email,
@@ -20,7 +21,6 @@ class UserService {
 
     final userCredential = await FirebaseAuth.instance
         .createUserWithEmailAndPassword(email: email, password: password);
-
     final uid = userCredential.user!.uid;
 
     final userData = {
@@ -31,21 +31,21 @@ class UserService {
       'createdAt': Timestamp.now(),
     };
 
+    // Default semester assignment for students (can be changed later).
     if (role == 'student') {
       userData['semester'] = '7';
     }
 
     await _usersRef.doc(uid).set(userData);
-
     return role;
   }
 
-  /// Stream all users of a specific role
+  /// Stream users filtered by `role` for admin UIs.
   Stream<QuerySnapshot> getUsersByRole(String role) {
     return _usersRef.where('role', isEqualTo: role).snapshots();
   }
 
-  /// Simple role detection from email
+  /// Lightweight role detection based on email prefix used in demo/test data.
   String _detectRole(String email) {
     if (email.startsWith('sample.faculty.')) return 'faculty';
     if (email.startsWith('sample.student.')) return 'student';

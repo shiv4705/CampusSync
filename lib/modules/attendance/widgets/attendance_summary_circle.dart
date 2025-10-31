@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// Small widget that renders a circular attendance percentage with a label.
 class AttendanceSummaryCircle extends StatelessWidget {
   final String title;
   final double value;

@@ -3,10 +3,12 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'student_assignment_detail_screen.dart';
 
+/// Lists assignments for a subject for students and separates ongoing vs completed.
 class StudentAssignmentsScreen extends StatelessWidget {
   final String subjectName;
   const StudentAssignmentsScreen({super.key, required this.subjectName});
 
+  /// Fetch assignments for the given subject from Supabase.
   Future<List<Map<String, dynamic>>> _fetchAssignments() async {
     final supabase = Supabase.instance.client;
     final res = await supabase
@@ -53,6 +55,7 @@ class StudentAssignmentsScreen extends StatelessWidget {
             }
           }
 
+          // Builds a section listing assignments and navigates to detail screen on tap.
           Widget section(
             String title,
             List<Map<String, dynamic>> list, {

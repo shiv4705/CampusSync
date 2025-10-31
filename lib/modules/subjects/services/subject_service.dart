@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SubjectService {
+  /// Service to read and write `subjects` and user lists in Firestore.
   final CollectionReference _subjectsRef = FirebaseFirestore.instance
       .collection('subjects');
 
@@ -8,7 +9,7 @@ class SubjectService {
     'users',
   );
 
-  /// Load all faculty users
+  /// Load all users with role == 'faculty' and return id/name pairs.
   Future<List<Map<String, dynamic>>> getAllFaculties() async {
     final snapshot = await _usersRef.where('role', isEqualTo: 'faculty').get();
     return snapshot.docs
@@ -16,7 +17,7 @@ class SubjectService {
         .toList();
   }
 
-  /// Assign a subject to a faculty
+  /// Create a `subjects` document linking a faculty to a subject string.
   Future<void> assignSubject({
     required String facultyId,
     required String facultyName,
@@ -32,7 +33,7 @@ class SubjectService {
     });
   }
 
-  /// Optional: Fetch all subjects
+  /// Stream of all subjects (newest first) for admin listing screens.
   Stream<QuerySnapshot> getAllSubjects() {
     return _subjectsRef.orderBy('createdAt', descending: true).snapshots();
   }

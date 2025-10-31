@@ -4,6 +4,8 @@ import '../../services/timetable_service.dart';
 import '../../widgets/timetable_table.dart';
 
 class StudentTimetableScreen extends StatelessWidget {
+  /// Student view of the class timetable for a semester.
+  /// Shows a grid table and day-wise details derived from timetable documents.
   StudentTimetableScreen({super.key});
 
   final String semester = '7';
@@ -44,7 +46,7 @@ class StudentTimetableScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color darkBlue1 = Color(0xFF091227);
+    // color constant used by the scaffold background
     const Color darkBlue2 = Color(0xFF0D1D50);
     final timetableService = TimetableService();
 
@@ -78,7 +80,7 @@ class StudentTimetableScreen extends StatelessWidget {
                 return sem == null || sem.toString() == semester;
               }).toList();
 
-          // Prepare timetable grid
+          // Prepare timetable grid (day->time->cell) and a day-wise details list.
           Map<String, Map<String, Map<String, dynamic>>> timetableGrid = {
             for (var day in days) day: {for (var time in times) time: {}},
           };

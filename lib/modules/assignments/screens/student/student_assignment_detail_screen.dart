@@ -9,6 +9,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'pdf_viewer_page.dart';
 
 class StudentAssignmentDetailScreen extends StatefulWidget {
+  /// Shows assignment details to a student and allows submitting a PDF.
+  /// `assignment` is the row data and `isMissed` marks whether deadline passed.
   final Map<String, dynamic> assignment;
   final bool isMissed;
 
@@ -32,6 +34,7 @@ class _StudentAssignmentDetailScreenState
   String? _pickedFileName;
   String? _uploadedFileUrl;
 
+  /// Fetch current student's submission (if any) for this assignment.
   Future<Map<String, dynamic>?> _fetchSubmission() async {
     if (user == null) return null;
     final res =
@@ -44,6 +47,7 @@ class _StudentAssignmentDetailScreenState
     return res;
   }
 
+  /// Let the student pick a PDF; stores bytes for upload/preview.
   Future<void> _pickFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -57,6 +61,7 @@ class _StudentAssignmentDetailScreenState
     });
   }
 
+  /// Preview the picked file (writes bytes to temp file) or open uploaded URL.
   void _previewPickedFile() {
     if (_pickedFileBytes != null) {
       final tempFile = File("${Directory.systemTemp.path}/$_pickedFileName");
@@ -72,6 +77,7 @@ class _StudentAssignmentDetailScreenState
     }
   }
 
+  /// Upload the picked file to Supabase storage and insert a submission row.
   Future<void> _submitFile() async {
     if (_pickedFileBytes == null) return;
     setState(() => _isUploading = true);
@@ -112,12 +118,14 @@ class _StudentAssignmentDetailScreenState
     }
   }
 
+  /// Helper to render ISO date strings into human readable form.
   String _formatDate(dynamic val) {
     if (val == null) return '-';
     final dt = DateTime.tryParse(val.toString());
     return dt != null ? DateFormat('dd MMM yyyy, HH:mm').format(dt) : '-';
   }
 
+  /// Open a URL; PDFs open in-app, other URLs are launched externally.
   Future<void> _openFile(String url) async {
     if (url.toLowerCase().endsWith('.pdf')) {
       Navigator.push(
@@ -276,6 +284,13 @@ class _StudentAssignmentDetailScreenState
                                             _isUploading ? null : _submitFile,
                                         icon: const Icon(Icons.check),
                                         label: const Text("Turned In"),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      // Preview the picked PDF before submitting.
+                                      ElevatedButton.icon(
+                                        onPressed: _previewPickedFile,
+                                        icon: const Icon(Icons.preview),
+                                        label: const Text('Preview'),
                                       ),
                                     ],
                                   ),

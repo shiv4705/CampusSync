@@ -9,6 +9,8 @@ import '../assignments/screens/faculty/faculty_subject_list_screen.dart';
 import '../event_calendar/screens/event_calendar.dart';
 import '../dashboard/dashboard_card.dart';
 
+/// Faculty dashboard exposing timetable, attendance marking, assignments
+/// and other faculty tools via animated dashboard cards.
 class FacultyDashboard extends StatefulWidget {
   const FacultyDashboard({super.key});
 
@@ -60,6 +62,7 @@ class _FacultyDashboardState extends State<FacultyDashboard>
       );
     });
 
+    // Play the entry animations for dashboard tiles.
     _controller.forward();
   }
 

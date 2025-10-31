@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'submission_popup_dialog.dart';
 
+/// Shows all assignments for a subject and allows opening the submissions dialog.
 class AssignmentDetailScreen extends StatefulWidget {
   final String subject;
   const AssignmentDetailScreen({super.key, required this.subject});
@@ -11,6 +12,7 @@ class AssignmentDetailScreen extends StatefulWidget {
 }
 
 class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
+  /// Query Supabase for assignments matching the subject name.
   Future<List<Map<String, dynamic>>> _getAssignments() async {
     final supabase = Supabase.instance.client;
 
@@ -68,6 +70,7 @@ class _AssignmentDetailScreenState extends State<AssignmentDetailScreen> {
                     style: const TextStyle(color: Colors.white70),
                   ),
                   onTap: () {
+                    // Open the submissions popup for this assignment.
                     showDialog(
                       context: context,
                       builder: (_) => SubmissionPopupDialog(assignment: a),

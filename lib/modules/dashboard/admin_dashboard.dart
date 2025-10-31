@@ -10,6 +10,8 @@ import '../subjects/screens/admin/assign_subject_screen.dart';
 import '../event_calendar/screens/event_calendar.dart';
 import 'dashboard_card.dart';
 
+/// Admin dashboard entry screen.
+/// Presents admin-specific actions as animated dashboard cards.
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
 
@@ -57,6 +59,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       );
     });
 
+    // Start the entry animations for dashboard items.
     _controller.forward();
   }
 
@@ -72,6 +75,7 @@ class _AdminDashboardState extends State<AdminDashboard>
     const Color darkBlue1 = Color(0xFF0A152E);
     const Color darkBlue2 = Color(0xFF0D1D50);
 
+    // Dashboard tiles and their target pages.
     final List<Map<String, dynamic>> dashboardItems = [
       {
         "title": "Add User",

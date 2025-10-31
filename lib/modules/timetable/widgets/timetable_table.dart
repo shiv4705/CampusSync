@@ -12,6 +12,9 @@ class TimetableTable extends StatelessWidget {
     required this.timetableGrid,
   });
 
+  /// A simple scrollable table that lays out times vertically and days horizontally.
+  /// `timetableGrid` should be a map day -> time -> cell-data.
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(

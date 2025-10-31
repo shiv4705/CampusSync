@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
+/// Simple card used to display a feedback entry in admin list views.
 class FeedbackCard extends StatelessWidget {
   final String title;
   final String message;
@@ -16,6 +17,7 @@ class FeedbackCard extends StatelessWidget {
     required this.onTap,
   });
 
+  /// Format the Firestore timestamp into a human readable string.
   String _formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return "Unknown time";
     return DateFormat('dd MMM yyyy, hh:mm a').format(timestamp.toDate());

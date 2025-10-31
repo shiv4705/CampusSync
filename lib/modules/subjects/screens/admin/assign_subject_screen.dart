@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../services/subject_service.dart';
 
 class AdminAssignSubjectScreen extends StatefulWidget {
+  /// Admin screen to assign a subject to a faculty member.
+  /// Select a faculty, enter subject code + name and submit to create the subject.
   const AdminAssignSubjectScreen({super.key});
 
   @override
@@ -27,6 +29,7 @@ class _AdminAssignSubjectScreenState extends State<AdminAssignSubjectScreen> {
   }
 
   Future<void> _loadFaculties() async {
+    // Load available faculty users for the dropdown using SubjectService.
     try {
       faculties = await _service.getAllFaculties();
     } catch (e) {
@@ -37,6 +40,7 @@ class _AdminAssignSubjectScreenState extends State<AdminAssignSubjectScreen> {
   }
 
   Future<void> _assignSubject() async {
+    // Validate inputs then call service to create the subject document.
     if (selectedFacultyId == null ||
         subjectCodeController.text.trim().isEmpty ||
         subjectNameController.text.trim().isEmpty) {
@@ -58,6 +62,7 @@ class _AdminAssignSubjectScreenState extends State<AdminAssignSubjectScreen> {
         const SnackBar(content: Text("Subject assigned successfully")),
       );
 
+      // Reset form on success.
       setState(() {
         selectedFacultyId = null;
         selectedFacultyName = null;

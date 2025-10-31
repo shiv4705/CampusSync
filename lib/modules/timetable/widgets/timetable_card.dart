@@ -12,6 +12,9 @@ class TimetableCard extends StatelessWidget {
     this.onEdit,
   });
 
+  /// Visual card that groups a day's classes into an expandable list.
+  /// If `onEdit` is supplied, tapping a class will call it with that class data.
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -29,6 +32,7 @@ class TimetableCard extends StatelessWidget {
             fontSize: 18,
           ),
         ),
+        // If there are no classes show an empty hint, otherwise render each row.
         children:
             classes.isEmpty
                 ? [

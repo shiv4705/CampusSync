@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../widgets/reset_request_card.dart';
 
+/// Admin screen that lists password reset requests.
+/// Admins can review and delete requests from this list.
 class ViewResetRequestsScreen extends StatelessWidget {
   const ViewResetRequestsScreen({super.key});
 
@@ -103,6 +105,7 @@ class ViewResetRequestsScreen extends StatelessWidget {
                           ),
                     );
                     if (confirm == true) {
+                      // Delete the selected reset request document.
                       await docs[index].reference.delete();
                     }
                   },

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
 
+/// Login form widget containing fields, forgot-password flow and submit.
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key});
 
@@ -15,6 +16,7 @@ class _LoginFormState extends State<LoginForm> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
+  /// Send a reset request document to Firestore and show feedback.
   Future<void> _handleForgotPassword() async {
     final email = _emailController.text.trim();
 
@@ -161,6 +163,7 @@ class _LoginFormState extends State<LoginForm> {
     );
   }
 
+  /// Standard input decoration used by the form fields.
   InputDecoration _inputDecoration(
     String label,
     IconData icon, {

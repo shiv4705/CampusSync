@@ -6,6 +6,8 @@ import 'add_timetable_screen.dart';
 import 'edit_timetable_screen.dart';
 
 class ManageTimetableScreen extends StatelessWidget {
+  /// Admin listing for timetable entries grouped by weekday.
+  /// Allows creating new slots and editing existing ones.
   const ManageTimetableScreen({super.key});
 
   static const List<String> weekdayOrder = [
@@ -61,7 +63,7 @@ class ManageTimetableScreen extends StatelessWidget {
               ),
             );
 
-          // Group by day
+          // Group documents into a day->list map for rendering per weekday.
           final Map<String, List<Map<String, dynamic>>> timetableByDay = {};
           for (var doc in docs) {
             final data = doc.data() as Map<String, dynamic>;

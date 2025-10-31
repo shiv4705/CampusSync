@@ -5,6 +5,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/assignment_service.dart';
 
+/// Screen for faculty to upload an assignment PDF for a subject.
+/// Handles picking a file, optional due date and creating the assignment row.
+
 class FacultyAssignmentUploadScreen extends StatefulWidget {
   final String subjectId;
   final String subjectName;
@@ -42,6 +45,8 @@ class _FacultyAssignmentUploadScreenState
     }
   }
 
+  /// Pick a PDF file from device storage (does not load bytes into memory).
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     final user = FirebaseAuth.instance.currentUser;
@@ -51,6 +56,7 @@ class _FacultyAssignmentUploadScreenState
     try {
       String? fileUrl;
       if (_pickedFile != null) {
+        // Create a namespaced destination path to avoid collisions.
         final destPath =
             '${user.email}/${widget.subjectName}/${DateTime.now().millisecondsSinceEpoch}_${_pickedFile!.path.split('/').last}';
         fileUrl = await _service.uploadAssignmentFile(_pickedFile!, destPath);
@@ -89,6 +95,8 @@ class _FacultyAssignmentUploadScreenState
     _descController.dispose();
     super.dispose();
   }
+
+  // Dispose controllers to avoid memory leaks.
 
   @override
   Widget build(BuildContext context) {

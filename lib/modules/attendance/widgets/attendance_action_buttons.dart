@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+/// Two action buttons used in the faculty attendance screen:
+/// - Submit Attendance: saves present students
+/// - Mark as Not Taken: marks the class as not conducted
 class AttendanceActionButtons extends StatelessWidget {
   final VoidCallback onSubmit;
   final VoidCallback onNotTaken;

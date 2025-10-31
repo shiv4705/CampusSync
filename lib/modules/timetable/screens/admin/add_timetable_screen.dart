@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/timetable_service.dart';
 
 class AddTimetableScreen extends StatefulWidget {
+  /// Admin screen to add a new timetable slot for a subject and faculty.
+  /// Validates room/faculty availability before inserting the document.
   const AddTimetableScreen({super.key});
 
   @override
@@ -50,6 +52,7 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
   }
 
   Future<void> fetchSubjects() async {
+    // Load `subjects` documents to populate subject dropdown and derive faculty.
     final snapshot =
         await FirebaseFirestore.instance.collection('subjects').get();
     setState(() {
@@ -59,6 +62,7 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
   }
 
   Future<void> handleAddTimetable() async {
+    // Validate form inputs and save; then perform safety checks and insert.
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
 
@@ -69,7 +73,7 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
       return;
     }
 
-    // ✅ 1. Check if room is already taken
+    // 1) Check if the room/time slot is already occupied.
     final roomTaken = await _timetableService.isSlotTaken(day, time, room);
     if (roomTaken) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -78,7 +82,7 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
       return;
     }
 
-    // ✅ 2. Check if faculty already has class at this time
+    // 2) Check if the faculty is busy at this slot.
     final facultyBusy = await _timetableService.isFacultyBusy(
       day,
       time,
@@ -93,7 +97,7 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
       return;
     }
 
-    // ✅ 3. Add timetable document in correct format
+    // 3) Safe to add the timetable entry.
     await _timetableService.addTimetable({
       'day': day,
       'time': time,
@@ -110,7 +114,6 @@ class _AddTimetableScreenState extends State<AddTimetableScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Timetable added successfully!')),
     );
-
     Navigator.pop(context);
   }
 

@@ -5,6 +5,8 @@ import 'package:table_calendar/table_calendar.dart';
 
 import '../../widgets/attendance_summary_circle.dart';
 
+/// Student-facing screen to view overall and per-subject attendance.
+/// Shows summary circles, subject-wise list and a calendar day-wise view.
 class StudentAttendanceScreen extends StatefulWidget {
   final String studentEmail;
   const StudentAttendanceScreen({super.key, required this.studentEmail});
@@ -29,11 +31,14 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
 
   @override
   void initState() {
+    // Initialize tabs and start fetching attendance documents.
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     fetchAttendance();
   }
 
+  /// Fetch all attendance documents and compute summaries grouped by
+  /// subject and by date for the current student email.
   Future<void> fetchAttendance() async {
     final db = FirebaseFirestore.instance;
     final snapshot = await db.collection('attendance').get();
@@ -104,6 +109,7 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
     });
   }
 
+  /// Color helper mapping attendance status to a color.
   Color statusColor(String status) {
     switch (status) {
       case 'Present':
@@ -309,7 +315,7 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  ...?groupedByDate[DateFormat(
+                                  ...groupedByDate[DateFormat(
                                             'yyyy-MM-dd',
                                           ).format(selectedDate)]
                                           ?.map((e) {
@@ -381,6 +387,7 @@ class _StudentAttendanceScreenState extends State<StudentAttendanceScreen>
 
   @override
   void dispose() {
+    // Dispose controllers and other resources.
     _tabController.dispose();
     super.dispose();
   }

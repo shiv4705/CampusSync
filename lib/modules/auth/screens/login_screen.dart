@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/login_form.dart';
 
+/// Login screen wrapper that shows the login form over a gradient background.
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
@@ -19,6 +20,7 @@ class LoginScreen extends StatelessWidget {
   }
 }
 
+/// Simple background container used by the login screen.
 class _LoginBackground extends StatelessWidget {
   final Widget child;
   const _LoginBackground({required this.child});

@@ -6,6 +6,9 @@ import '../../services/study_material_service.dart';
 
 class UploadMaterialPage extends StatefulWidget {
   final String subjectId;
+
+  /// Upload PDF study materials to Supabase storage and create DB records.
+  /// Multiple PDFs can be added as drafts and published together.
   const UploadMaterialPage({super.key, required this.subjectId});
 
   @override
@@ -20,6 +23,7 @@ class _UploadMaterialPageState extends State<UploadMaterialPage> {
   bool _isPublishing = false;
 
   Future<void> _addPdf() async {
+    // Pick a PDF from the device and add it to in-memory drafts list.
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf'],
@@ -33,6 +37,7 @@ class _UploadMaterialPageState extends State<UploadMaterialPage> {
   }
 
   Future<void> _publishMaterials() async {
+    // Upload each drafted PDF to Supabase storage and insert a materials row.
     if (_titleController.text.trim().isEmpty || _drafts.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

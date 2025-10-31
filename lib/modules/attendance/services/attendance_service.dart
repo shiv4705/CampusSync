@@ -1,11 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+/// Small service that encapsulates attendance-related Firestore operations.
+/// Used by faculty screens to find unmarked classes and write attendance docs.
 class AttendanceService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final User? currentUser = FirebaseAuth.instance.currentUser;
   final DateTime collegeStartDate = DateTime(2025, 8, 11);
 
+  /// Returns all calendar dates from `collegeStartDate` up to today.
   List<DateTime> getAllDatesFromStart() {
     final today = DateTime.now();
     final daysDiff = today.difference(collegeStartDate).inDays;
@@ -15,6 +18,8 @@ class AttendanceService {
     );
   }
 
+  /// Scan the faculty's timetable across dates and return classes
+  /// that don't yet have an `attendance` document (unmarked classes).
   Future<List<Map<String, dynamic>>> fetchUnmarkedClasses() async {
     if (currentUser?.email == null) return [];
     List<Map<String, dynamic>> unmarkedClasses = [];
@@ -57,6 +62,7 @@ class AttendanceService {
     return unmarkedClasses;
   }
 
+  /// Load student documents for a semester; returns a list of maps.
   Future<List<Map<String, dynamic>>> loadStudents(String semester) async {
     final snap =
         await _db
@@ -64,9 +70,10 @@ class AttendanceService {
             .where('role', isEqualTo: 'student')
             .where('semester', isEqualTo: semester)
             .get();
-    return snap.docs.map((d) => d.data() as Map<String, dynamic>).toList();
+    return snap.docs.map((d) => d.data()).cast<Map<String, dynamic>>().toList();
   }
 
+  /// Submit attendance for the provided class map and present student emails.
   Future<void> submitAttendance(
     Map<String, dynamic> classData,
     Set<String> presentEmails,
@@ -84,6 +91,7 @@ class AttendanceService {
     });
   }
 
+  /// Mark a scheduled class as not taken; writes a reason and isTaken=false.
   Future<void> markAsNotTaken(Map<String, dynamic> classData) async {
     final docId = classData['key'];
     await _db.collection('attendance').doc(docId).set({
@@ -99,6 +107,7 @@ class AttendanceService {
   }
 }
 
+/// Small DateTime helper to convert weekday integer to name string.
 extension DateTimeX on DateTime {
   String weekdayName() {
     switch (weekday) {

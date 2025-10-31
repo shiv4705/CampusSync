@@ -4,6 +4,9 @@ import '../../services/announcement_service.dart';
 
 class UploadAnnouncementPage extends StatefulWidget {
   final String subjectId;
+
+  /// Simple form for faculty to publish an announcement to Firestore.
+  /// Validates the title and saves description, subject id and timestamp.
   const UploadAnnouncementPage({super.key, required this.subjectId});
 
   @override
@@ -17,6 +20,7 @@ class _UploadAnnouncementPageState extends State<UploadAnnouncementPage> {
   bool _isPublishing = false;
 
   Future<void> _publishAnnouncement() async {
+    // Validate input and push the announcement document to Firestore.
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Enter title for announcement")),

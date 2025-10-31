@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'student_assignment_screen.dart';
 
+/// Shows all available subjects to students; tapping a subject opens its assignments.
 class StudentAssignmentSubjectsScreen extends StatelessWidget {
   const StudentAssignmentSubjectsScreen({super.key});
 
@@ -10,6 +11,7 @@ class StudentAssignmentSubjectsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
+      // Simple gate: student must be logged in to view assignments.
       return const Scaffold(
         backgroundColor: Color(0xFF0D1D50),
         body: Center(
@@ -63,6 +65,7 @@ class StudentAssignmentSubjectsScreen extends StatelessWidget {
                     color: Colors.white70,
                   ),
                   onTap: () {
+                    // Open the student assignments list for this subject.
                     Navigator.push(
                       context,
                       MaterialPageRoute(

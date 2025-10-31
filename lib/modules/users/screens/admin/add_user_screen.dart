@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../services/user_service.dart';
 
 class AddUserScreen extends StatefulWidget {
+  /// Simple admin form to create a new user (student or faculty).
+  /// Validates passwords locally and delegates creation to `UserService`.
   const AddUserScreen({super.key});
 
   @override
@@ -78,6 +80,7 @@ class _AddUserScreenState extends State<AddUserScreen>
     final password = _passwordController.text.trim();
     final confirmPassword = _confirmPasswordController.text.trim();
 
+    // Basic validation then create user via UserService; show result message.
     if (name.isEmpty ||
         email.isEmpty ||
         password.isEmpty ||

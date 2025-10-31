@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/feedback_service.dart';
 import '../../widgets/feedback_card.dart';
 
+/// Admin view that streams and lists submitted feedback.
+/// Tapping an item shows the full message in a dialog.
 class ViewFeedbackScreen extends StatefulWidget {
   const ViewFeedbackScreen({super.key});
 
@@ -15,6 +17,7 @@ class _ViewFeedbackScreenState extends State<ViewFeedbackScreen>
     with TickerProviderStateMixin {
   final FeedbackService _service = FeedbackService();
 
+  /// Show the feedback message in a dialog when a list item is tapped.
   void _showMessageDialog(BuildContext context, String title, String message) {
     showDialog(
       context: context,

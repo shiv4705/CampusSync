@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// Renders the list of students with checkboxes and a select-all button.
 class StudentCheckboxList extends StatelessWidget {
   final List<Map<String, dynamic>> students;
   final Set<String> presentEmails;
@@ -16,6 +17,7 @@ class StudentCheckboxList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Render nothing if there are no students loaded yet.
     if (students.isEmpty) return const SizedBox();
 
     return Column(

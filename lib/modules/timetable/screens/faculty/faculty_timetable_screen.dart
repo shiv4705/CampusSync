@@ -5,6 +5,8 @@ import '../../services/timetable_service.dart';
 import '../../widgets/timetable_card.dart';
 
 class FacultyTimetableScreen extends StatelessWidget {
+  /// Faculty's personal timetable view: filters the global timetable by faculty
+  /// identity (email/uid/displayName) and shows day-wise classes.
   const FacultyTimetableScreen({super.key});
 
   static const List<String> weekdayOrder = [
@@ -40,6 +42,7 @@ class FacultyTimetableScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     const Color darkBlue2 = Color(0xFF0D1D50);
 
+    // Get auth user to match rows to this faculty (email, uid or displayName).
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
       return const Scaffold(body: Center(child: Text("Not logged in")));
@@ -79,6 +82,7 @@ class FacultyTimetableScreen extends StatelessWidget {
           }
 
           final allDocs = snapshot.data?.docs ?? [];
+          // Filter global timetable down to rows that belong to this faculty.
           final docs =
               allDocs.where((d) {
                 final data = d.data() as Map<String, dynamic>;
@@ -119,6 +123,7 @@ class FacultyTimetableScreen extends StatelessWidget {
             return timeA.compareTo(timeB);
           });
 
+          // Build a day -> classes map with normalized display fields.
           // ✅ FIXED: Include 'faculty' field in class data
           final Map<String, List<Map<String, dynamic>>> timetableByDay = {};
           for (var doc in docs) {

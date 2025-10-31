@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/user_service.dart';
 
 class ViewAllUsersScreen extends StatefulWidget {
+  /// Admin view to browse and search all users (students and faculty).
+  /// Provides tabs and incremental search for each role.
   const ViewAllUsersScreen({super.key});
 
   @override
@@ -34,6 +36,7 @@ class _ViewAllUsersScreenState extends State<ViewAllUsersScreen>
   }
 
   Widget _buildUserList(String role, String searchQuery) {
+    // Stream the users for `role`, filter locally by `searchQuery` and render.
     return StreamBuilder<QuerySnapshot>(
       stream: _service.getUsersByRole(role),
       builder: (context, snapshot) {

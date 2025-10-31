@@ -4,9 +4,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+/// Helper/service for assignment-related operations (uploads, queries, marks).
 class AssignmentService {
   final _supabase = Supabase.instance.client;
 
+  /// Get assignments created by a faculty (filter by email).
   Future<List<Map<String, dynamic>>> getAssignmentsByFaculty(
     String facultyEmail,
   ) async {
@@ -19,6 +21,7 @@ class AssignmentService {
     return (res as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
+  /// Get assignments for a subject name.
   Future<List<Map<String, dynamic>>> getAssignmentsBySubject(
     String subjectName,
   ) async {
@@ -31,6 +34,7 @@ class AssignmentService {
     return (res as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
+  /// Upload an assignment file to Supabase storage and return public URL.
   Future<String?> uploadAssignmentFile(
     File file,
     String destinationPath,
@@ -44,11 +48,13 @@ class AssignmentService {
           .from('assignments')
           .getPublicUrl(destinationPath);
     } catch (e) {
-      print('AssignmentService.uploadAssignmentFile error: $e');
+      // Log and return null on failure.
+      debugPrint('AssignmentService.uploadAssignmentFile error: $e');
       return null;
     }
   }
 
+  /// Create an assignment row and return the inserted map (or null).
   Future<Map<String, dynamic>?> createAssignment({
     required String subjectId,
     required String subjectName,
@@ -70,10 +76,11 @@ class AssignmentService {
     };
 
     final res = await _supabase.from('assignments').insert(payload).select();
-    if (res == null || (res as List).isEmpty) return null;
+    if ((res as List).isEmpty) return null;
     return Map<String, dynamic>.from(res[0]);
   }
 
+  /// Fetch submissions for a given assignment id.
   Future<List<Map<String, dynamic>>> getSubmissions(
     String? assignmentId,
   ) async {
@@ -88,6 +95,7 @@ class AssignmentService {
     return (res as List).map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
+  /// Upload raw student submission bytes and return public URL.
   Future<String?> uploadStudentSubmission(
     Uint8List bytes,
     String destPath,
@@ -100,16 +108,17 @@ class AssignmentService {
           .from('student_submissions')
           .getPublicUrl(destPath);
     } catch (e) {
-      print('uploadStudentSubmission error: $e');
+      debugPrint('uploadStudentSubmission error: $e');
       return null;
     }
   }
 
+  /// Insert a submission row into `student_assignments`.
   Future<void> createSubmission(Map<String, dynamic> data) async {
     await _supabase.from('student_assignments').insert(data);
   }
 
-  /// ✅ Save marks (original)
+  /// Save marks for a student's submission (assignmentId + studentId).
   Future<void> saveMarks(
     String assignmentId,
     String studentId,
@@ -122,12 +131,12 @@ class AssignmentService {
         .eq('student_id', studentId);
   }
 
-  /// ✅ Added: updateMarks() for UI compatibility
+  /// Convenience alias used by some UI call-sites.
   Future<void> updateMarks(String assignmentId, String studentId, int marks) {
     return saveMarks(assignmentId, studentId, marks);
   }
 
-  /// ✅ Open Supabase PDF / file safely
+  /// Open a file URL or convert a storage path to a public URL then launch it.
   Future<void> openFile(String? url) async {
     if (url == null || url.isEmpty || url == "No file") {
       debugPrint("⚠️ No file URL found");
@@ -154,6 +163,7 @@ class AssignmentService {
     }
   }
 
+  /// Show a small dialog for the faculty to enter marks (1-10).
   Future<int?> enterMarksDialog(BuildContext context) async {
     final marksController = TextEditingController();
     String? error;

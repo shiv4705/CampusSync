@@ -13,6 +13,8 @@ class SubjectMaterialsPage extends StatefulWidget {
   final String subjectName;
   final bool isFaculty; // faculty flag
 
+  /// Page that shows study materials and announcements for a subject.
+  /// When `isFaculty` is true, FABs allow uploading materials and announcements.
   const SubjectMaterialsPage({
     super.key,
     required this.subjectId,
@@ -42,6 +44,7 @@ class _SubjectMaterialsPageState extends State<SubjectMaterialsPage>
   }
 
   Future<void> _loadMaterials() async {
+    // Load study materials for this subject from Supabase, newest first.
     try {
       final res = await _supabase
           .from('study_materials')
@@ -62,6 +65,7 @@ class _SubjectMaterialsPageState extends State<SubjectMaterialsPage>
   }
 
   Future<void> _openUrl(String? url) async {
+    // Open a provided URL externally. Silently return if invalid.
     if (url == null || url.isEmpty) return;
     final uri = Uri.tryParse(url);
     if (uri == null) return;
@@ -102,6 +106,7 @@ class _SubjectMaterialsPageState extends State<SubjectMaterialsPage>
             end: Alignment.bottomRight,
           ),
         ),
+        // Main content: two tabs — Materials and Announcements.
         child: TabBarView(
           controller: _tabController,
           children: [
@@ -283,6 +288,7 @@ class _SubjectMaterialsPageState extends State<SubjectMaterialsPage>
           ],
         ),
       ),
+      // Faculty-only FABs to add materials and announcements.
       floatingActionButton:
           widget.isFaculty
               ? Column(

@@ -10,6 +10,8 @@ import '../assignments/screens/student/student_assignment_subjects_screen.dart';
 import '../event_calendar/screens/event_calendar.dart';
 import '../dashboard/dashboard_card.dart';
 
+/// Student dashboard providing quick access to timetable, attendance,
+/// assignments and other student-facing features.
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
 
@@ -53,6 +55,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
 
     final String? studentEmail = FirebaseAuth.instance.currentUser?.email;
 
+    // Tiles shown to students with tap handlers.
     final List<Map<String, dynamic>> dashboardItems = [
       {
         "title": "View Timetable",
@@ -76,6 +79,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
         "title": "View Attendance",
         "icon": Icons.fact_check,
         "onTap": () {
+          // Protect navigation if email is missing.
           if (studentEmail != null) {
             Navigator.push(
               context,

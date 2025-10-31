@@ -3,12 +3,14 @@ import 'core/app_initializer.dart';
 import 'core/app_theme.dart';
 import 'core/routes.dart';
 
+/// App entrypoint: initialize SDKs then start the Flutter app.
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await AppInitializer.initialize(); // centralized Firebase & Supabase init
+  await AppInitializer.initialize(); // init Firebase & Supabase
   runApp(const CampusSyncApp());
 }
 
+/// Root widget for the CampusSync application.
 class CampusSyncApp extends StatelessWidget {
   const CampusSyncApp({super.key});
 
@@ -18,9 +20,9 @@ class CampusSyncApp extends StatelessWidget {
       title: 'New CampusSync',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
-      theme: AppTheme.darkTheme, // centralized theme
-      initialRoute: Routes.login, // defined in routes.dart
-      onGenerateRoute: Routes.generateRoute,
+      theme: AppTheme.darkTheme, // use centralized dark theme
+      initialRoute: Routes.login, // start at login
+      onGenerateRoute: Routes.generateRoute, // route factory
     );
   }
 }

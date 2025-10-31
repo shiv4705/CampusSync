@@ -10,9 +10,12 @@ import 'assignment_detail_screen.dart';
 enum AssignmentMode { upload, viewSubmissions }
 
 class FacultySubjectListScreen extends StatelessWidget {
+  /// Screen that lists subjects assigned to the logged-in faculty.
+  /// Mode determines whether tapping a subject uploads an assignment or views submissions.
   final AssignmentMode mode;
   const FacultySubjectListScreen({super.key, required this.mode});
 
+  /// Fetch subjects where the current user is listed as faculty.
   Future<List<Map<String, dynamic>>> _fetchSubjectsForFaculty() async {
     final facultyId = FirebaseAuth.instance.currentUser?.uid;
     if (facultyId == null || facultyId.isEmpty) return [];
@@ -23,11 +26,10 @@ class FacultySubjectListScreen extends StatelessWidget {
             .where('facultyId', isEqualTo: facultyId)
             .get();
 
-    return snap.docs
-        .map((d) => {'id': d.id, ...d.data() as Map<String, dynamic>})
-        .toList();
+    return snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
   }
 
+  /// Extract an alphanumeric subject code from display string (e.g., "CS101 - Intro").
   String _extractSubjectCode(String subjectString) {
     final parts = subjectString.split(RegExp(r'\s*-\s*'));
     final left = parts.isNotEmpty ? parts[0] : subjectString;
@@ -85,7 +87,7 @@ class FacultySubjectListScreen extends StatelessWidget {
                       ),
                     );
                   } else {
-                    // ✅ Directly go to assignments for this subject
+                    // Navigate to list of assignments and their submissions for the subject.
                     Navigator.push(
                       context,
                       MaterialPageRoute(

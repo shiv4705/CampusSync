@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'subject_materials_page.dart';
 
 class FacultyClassroomPage extends StatefulWidget {
+  /// Faculty view that lists classrooms (subjects) assigned to the current faculty.
+  /// Tapping a row opens the subject's materials page.
   const FacultyClassroomPage({super.key});
 
   @override
@@ -21,8 +23,9 @@ class _FacultyClassroomPageState extends State<FacultyClassroomPage> {
   }
 
   Future<void> _loadClassrooms() async {
+    // Load subjects where `facultyId` matches the current user's id.
+    // NOTE: replace the demo `currentUserId` with real auth user id retrieval.
     try {
-      final user = _firestore.app.options.authDomain; // replace if needed
       final currentUserId =
           "iJjBlzX54pZRCVqUcLPEg1c2LhC3"; // demo, replace with auth logic
 
@@ -33,6 +36,7 @@ class _FacultyClassroomPageState extends State<FacultyClassroomPage> {
               .get();
 
       setState(() {
+        // Convert Firestore docs to a simple list of maps for the UI.
         _classrooms =
             snapshot.docs
                 .map((doc) => {"id": doc.id, "subject": doc['subject']})
@@ -57,6 +61,7 @@ class _FacultyClassroomPageState extends State<FacultyClassroomPage> {
         title: const Text("My Classrooms"),
         backgroundColor: darkBlue,
       ),
+      // Body: show a loader, empty message or the classroom list.
       body:
           _loading
               ? const Center(child: CircularProgressIndicator())

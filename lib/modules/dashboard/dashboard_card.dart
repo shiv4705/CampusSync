@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// Reusable dashboard card with hover/focus animations used across dashboards.
 class DashboardCard extends StatefulWidget {
   final String title;
   final IconData icon;
@@ -23,6 +24,7 @@ class _DashboardCardState extends State<DashboardCard> {
 
   @override
   Widget build(BuildContext context) {
+    // MouseRegion provides hover feedback on desktop/web platforms.
     return MouseRegion(
       onEnter: (_) => setState(() => isHovered = true),
       onExit: (_) => setState(() => isHovered = false),

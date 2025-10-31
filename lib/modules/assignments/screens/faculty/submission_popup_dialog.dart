@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/assignment_service.dart';
 
 class SubmissionPopupDialog extends StatefulWidget {
+  /// Popup dialog that lists student submissions for the provided assignment.
   final Map<String, dynamic> assignment;
   const SubmissionPopupDialog({super.key, required this.assignment});
 
@@ -17,6 +18,7 @@ class _SubmissionPopupDialogState extends State<SubmissionPopupDialog> {
   void initState() {
     super.initState();
 
+    // Resolve assignment id from a few common possible keys and fetch submissions.
     final rawId =
         widget.assignment['id'] ??
         widget.assignment['assignment_id'] ??
@@ -65,6 +67,7 @@ class _SubmissionPopupDialogState extends State<SubmissionPopupDialog> {
               itemBuilder: (_, i) {
                 final s = submissions[i];
 
+                // Each row shows student email, marks and actions to open file or enter marks.
                 return ListTile(
                   title: Text(
                     s['student_email'] ?? 'Unknown',
@@ -100,6 +103,7 @@ class _SubmissionPopupDialogState extends State<SubmissionPopupDialog> {
                         icon: const Icon(Icons.edit, color: Colors.orange),
                         tooltip: 'Enter marks',
                         onPressed: () async {
+                          // Open a dialog to enter marks and save them to DB.
                           final marks = await _service.enterMarksDialog(
                             context,
                           );
@@ -130,6 +134,7 @@ class _SubmissionPopupDialogState extends State<SubmissionPopupDialog> {
                             );
 
                             setState(() {
+                              // Refresh the submission list after marking.
                               _future = _service.getSubmissions(assignmentId);
                             });
                           }

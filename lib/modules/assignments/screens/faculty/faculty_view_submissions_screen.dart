@@ -4,8 +4,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'assignment_detail_screen.dart';
 
 class FacultyViewSubmissionsScreen extends StatelessWidget {
+  /// Faculty entry screen that lists distinct subjects for which this faculty has assignments.
+  /// Tapping a subject opens the assignments & submissions view.
   const FacultyViewSubmissionsScreen({super.key});
 
+  /// Query Supabase for unique subject names created by the current faculty email.
   Future<List<String>> _getFacultySubjects() async {
     final email = FirebaseAuth.instance.currentUser?.email ?? '';
     final supabase = Supabase.instance.client;
@@ -59,6 +62,7 @@ class FacultyViewSubmissionsScreen extends StatelessWidget {
                     style: TextStyle(color: Colors.white70),
                   ),
                   onTap: () {
+                    // Open the assignment list for the selected subject.
                     Navigator.push(
                       context,
                       MaterialPageRoute(

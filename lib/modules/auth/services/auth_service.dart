@@ -5,7 +5,10 @@ import 'package:campussyncnew/modules/dashboard/admin_dashboard.dart';
 import 'package:campussyncnew/modules/dashboard/faculty_dashboard.dart';
 import 'package:campussyncnew/modules/dashboard/student_dashboard.dart';
 
+/// Authentication helper that handles login and forgot-password flows.
+/// NOTE: role detection here is heuristic (email prefix) used to route to dashboards.
 class AuthService {
+  /// Very small heuristic to detect a role from an email pattern used in demo data.
   String _detectRoleFromEmail(String email) {
     if (email.startsWith('sample.admin@')) return 'admin';
     if (email.startsWith('sample.faculty.')) return 'faculty';
@@ -13,6 +16,7 @@ class AuthService {
     return 'unknown';
   }
 
+  /// Perform sign-in and navigate to the appropriate dashboard on success.
   Future<void> handleLogin(
     BuildContext context,
     String email,
@@ -70,6 +74,7 @@ class AuthService {
     }
   }
 
+  /// Add a reset request document to Firestore so admins can process it.
   Future<void> handleForgotPassword(BuildContext context, String email) async {
     if (email.isEmpty) {
       _showDialog(
@@ -100,6 +105,7 @@ class AuthService {
     }
   }
 
+  /// Small helper to show themed alert dialogs.
   void _showDialog(BuildContext context, String title, String message) {
     showDialog(
       context: context,

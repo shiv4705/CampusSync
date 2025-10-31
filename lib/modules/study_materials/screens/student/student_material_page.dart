@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../faculty/subject_materials_page.dart';
 
 class StudentMaterialPage extends StatefulWidget {
+  /// Student-facing list of subjects. Tap a subject to view materials/announcements.
   const StudentMaterialPage({super.key});
 
   @override
@@ -21,6 +22,7 @@ class _StudentMaterialPageState extends State<StudentMaterialPage> {
   }
 
   Future<void> _loadSubjects() async {
+    // Load the list of subjects available to students (simple snapshot read).
     try {
       final snapshot = await _firestore.collection('subjects').get();
       setState(() {
@@ -45,6 +47,7 @@ class _StudentMaterialPageState extends State<StudentMaterialPage> {
     return Scaffold(
       backgroundColor: darkBlue,
       appBar: AppBar(title: const Text("Subjects"), backgroundColor: darkBlue),
+      // Body: loader, empty state, or list of subjects to open materials.
       body:
           _loading
               ? const Center(child: CircularProgressIndicator())
